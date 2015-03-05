@@ -3,7 +3,7 @@ module agdARGS.Data.Arguments where
 open import Level
 open import Data.Unit
 open import Data.Bool
-open import Data.Product
+open import Data.Product as Prod
 open import Data.Sum as Sum
 open import Data.Maybe as Maybe
 open import Data.String as Str hiding (strictTotalOrder)
@@ -54,13 +54,21 @@ module Arguments (ℓ : Level) where
   Arguments : Set (suc ℓ)
   Arguments = UniqueSortedList -∞ +∞
 
-  Options : (m : Argument ℓ → Set ℓ) {lb ub : _} (args : UniqueSortedList lb ub) → Set ℓ
-  Options m (lt ■)           = Lift ⊤
-  Options m (hd , lt ∷ args) = m hd × Options m args
+  options : (m : Argument ℓ → Set ℓ) {lb ub : _} (args : UniqueSortedList lb ub) → Set ℓ
+  options m (lt ■)           = Lift ⊤
+  options m (hd , lt ∷ args) = m hd × options m args
+
+  -- This is a trick to facilitate type inference: when `args` is
+  -- instantiated, `options` will compute, making it impossible
+  -- to reconstruct `args`'s value, but `Options` will stay stuck.
+  -- This is why `get` uses `Options` (and takes `args` as an
+  -- implicit argument) and `parse` produces it.
+  data Options (m : Argument ℓ → Set ℓ) (args : Arguments) : Set ℓ where
+    mkOptions : options m args → Options m args
 
   getOptions :
     (m : Argument ℓ → Set ℓ) {lb ub : _} {args : UniqueSortedList lb ub} {arg : Argument ℓ}
-    (pr : arg ∈ args) → Options m args → m arg
+    (pr : arg ∈ args) → options m args → m arg
   getOptions m z      = proj₁
   getOptions m (s pr) = getOptions m pr ∘ proj₂
 
@@ -70,7 +78,7 @@ module Arguments (ℓ : Level) where
   MaybeMode : Argument ℓ → Set ℓ
   MaybeMode = Maybe ∘ SetDomain ∘ domain
 
-  defaultOptions : {lb ub : _} (args : UniqueSortedList lb ub) → Options MaybeMode args
+  defaultOptions : {lb ub : _} (args : UniqueSortedList lb ub) → options MaybeMode args
   defaultOptions (lt ■)           = lift tt
   defaultOptions (hd , lt ∷ args) = nothing , defaultOptions args
 
@@ -84,10 +92,9 @@ module Arguments (ℓ : Level) where
   open import lib.Nullary
 
   genericGet :
-    {m : Argument ℓ → Set ℓ} (args : Arguments)
-    (str : String) (opts : Options m args) →
+    {m : Argument ℓ → Set ℓ} {args : Arguments} (str : String) (opts : Options m args) →
     dec (findArgument str args) (m ∘ proj₁) (const $ Lift ⊤)
-  genericGet {m} args str opts = dec′ C (findArgument str args) success failure
+  genericGet {m} {args} str (mkOptions opts) = dec′ C (findArgument str args) success failure
     where
       C : Dec _ → Set ℓ
       C d = dec d (m ∘ proj₁) (const $ Lift ⊤)
@@ -106,7 +113,7 @@ module Arguments (ℓ : Level) where
      {M : Set ℓ → Set ℓ} (MM : RawMonad M) →
      {lb ub : _} (args : UniqueSortedList lb ub) {f g : Argument ℓ → Set ℓ}
      (upd : {arg : Argument ℓ} (pr : arg ∈ args) → f arg → M (g arg)) →
-     Options f args → M (Options g args)
+     options f args → M (options g args)
   mapMOptions MM (lt ■)         upd opts       = let open RawMonad MM in return opts
   mapMOptions MM (hd , lt ∷ xs) upd (v , opts) =
     upd z v                          >>= λ w  →
@@ -118,7 +125,7 @@ module Arguments (ℓ : Level) where
      {M : Set ℓ → Set ℓ} (MM : RawMonad M) →
      {lb ub : _} {args : UniqueSortedList lb ub} {f : Argument ℓ → Set ℓ}
      {arg : Argument ℓ} (pr : arg ∈ args) (updArg : f arg → M (f arg)) →
-     Options f args → M (Options f args)
+     options f args → M (options f args)
   updateMOptions {M} MM {args = args} {f} {arg} pr updArgs = mapMOptions MM _ (upd pr updArgs)
     where
       open RawMonad MM
@@ -131,12 +138,11 @@ module Arguments (ℓ : Level) where
       upd (s pr₁) f z       = return
       upd (s pr₁) f (s pr₂) = upd pr₁ f pr₂
 
-  monadSum : {ℓᵃ : Level} (A : Set ℓᵃ) {ℓᵇ : Level} → RawMonad ((Set (ℓᵃ ⊔ ℓᵇ) → Set (ℓᵃ ⊔ ℓᵇ)) ∋ _⊎_ A )
-  monadSum A {ℓᵇ} = record { return = inj₂ ; _>>=_ = [ flip (const inj₁) , flip _$_ ]′ }
+  import agdARGS.Data.Sum as Sum
 
   set : {args : Arguments} {arg : Argument ℓ} (pr : arg ∈ args) (v : SetDomain (domain arg)) →
-        Options MaybeMode args → String ⊎ Options MaybeMode args
-  set {_} {arg} pr v = updateMOptions (monadSum String) pr $ elimDomain {P = P} PNone PSome PALot (domain arg) v
+        options MaybeMode args → String ⊎ options MaybeMode args
+  set {_} {arg} pr v = updateMOptions (Sum.monad String) pr $ elimDomain {P = P} PNone PSome PALot (domain arg) v
     where
       P : Domain ℓ → Set ℓ
       P d = SetDomain d → Maybe (SetDomain d) → String ⊎ Maybe (SetDomain d)
@@ -156,11 +162,13 @@ module Arguments (ℓ : Level) where
   open import lib.Nullary
 
   ParseResult : Arguments → Maybe (Argument ℓ) → Set ℓ
-  ParseResult args default = maybe′ MaybeMode (Lift ⊤) default × Options MaybeMode args
+  ParseResult args default = maybe′ MaybeMode (Lift ⊤) default × options MaybeMode args
 
-  parse : List String → (default : Maybe (Argument ℓ)) (args : Arguments) → String ⊎ ParseResult args default
-  parse xs default args = go xs (initDefault , defaultOptions args)
+  parse : List String → (default : Maybe (Argument ℓ)) (args : Arguments) →
+          String ⊎ maybe′ MaybeMode (Lift ⊤) default × Options MaybeMode args
+  parse xs default args = Sum.map id (Prod.map id mkOptions) $ go xs (initDefault , defaultOptions args)
     where
+
       initDefault : maybe′ MaybeMode (Lift ⊤) default
       initDefault = maybe {B = maybe′ MaybeMode (Lift ⊤)} (λ _ → nothing) (lift tt) default
 
@@ -172,11 +180,11 @@ module Arguments (ℓ : Level) where
               ; (just arg) →
                 (case (domain arg)
                 return (λ d → Parser d → Maybe (SetDomain d) →
-                              String ⊎ (Maybe (SetDomain d) × Options MaybeMode args))
+                              String ⊎ (Maybe (SetDomain d) × options MaybeMode args))
                 of λ { None     p old → inj₁ "Defaulting should always work on a RawMagma"
                      ; (Some S) p old → inj₁ "Defaulting should always work on a RawMagma"
                      ; (ALot M) p old →
-                         let open RawMonad (monadSum String {ℓ})
+                         let open RawMonad (Sum.monad String {ℓ})
                              open RawMagma M
                          in (λ v → (maybe (λ w → just (v ∙ w)) (just v) old , opts)) <$> p x
                      }) (parser arg)
@@ -194,24 +202,24 @@ module Arguments (ℓ : Level) where
                  return (λ d → String ⊎ SetDomain d)
                  of λ { None → inj₂ (lift tt)
                       ; _    → inj₁ ("Option " ++ flag (proj₁ elpreq) ++ " expects an argument; none given") }
-            open RawMonad (monadSum String {ℓ})
+            open RawMonad (Sum.monad String {ℓ})
         in sd >>= λ v → set (proj₁ (proj₂ elpreq)) v opts >>= λ opts′ → return (opt , opts′)
       go (x ∷ y ∷ xs) (opt , opts) =
         flip (dec (findArgument x args))
         -- flag not found
         (const $
-          let open RawMonad (monadSum String {ℓ})
+          let open RawMonad (Sum.monad String {ℓ})
           in failure x (opt , opts) >>= go (y ∷ xs))
         -- flag found
         $ λ elpreq →
         let vb = (case domain (proj₁ elpreq)
                   return (λ d → Parser d → String ⊎ (SetDomain d × Bool))
-                  of let open RawMonad (monadSum String {ℓ}) in λ
+                  of let open RawMonad (Sum.monad String {ℓ}) in λ
                      { None     p → inj₂ (lift tt , false)
                      ; (Some S) p → (λ s → s , true) <$> p y
                      ; (ALot M) p → (λ s → s , true) <$> p y }
                  ) (parser (proj₁ elpreq))
-            open RawMonad (monadSum String {ℓ})
+            open RawMonad (Sum.monad String {ℓ})
         in vb >>= uncurry λ v b → set (proj₁ (proj₂ elpreq)) v opts >>= λ opts′ →
            (if b then go xs else go (y ∷ xs)) (opt , opts′)
 

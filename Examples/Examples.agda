@@ -56,11 +56,12 @@ test = version `∷ inverse `∷ `[]
 testArg : Dec _
 testArg = findArgument "-i" test
 
-testParse : List (String ⊎ ParseResult test (just textFiles))
+testParse : List (String ⊎ _)
 testParse = List.map (λ xs → parse xs (just textFiles) test) tests
   where
     parse₁ = "-i" ∷ "Filename.txt" ∷ "-V" ∷ "otherFileName.html" ∷ []
     parse₂ = "Filename.txt" ∷ "-V" ∷ "otherFileName.html" ∷ []
     parse₃ = "-V" ∷ []
     tests  = parse₁ ∷ parse₂ ∷ parse₃ ∷ []
+
 

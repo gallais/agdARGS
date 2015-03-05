@@ -40,7 +40,7 @@ main = run $
     putStrLn $
       [ id
       , (uncurry $ λ ns opts →
-           if is-just $ get config "-V" opts
+           if is-just $ get "-V" opts
            then "Sum: version 0.9"
            else maybe (NatShow.show ∘ foldl _+_ 0) "0" ns)
       ]′ vs

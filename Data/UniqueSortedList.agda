@@ -16,7 +16,7 @@ module agdARGS.Data.UniqueSortedList
   open import Category.Monad
   open import agdARGS.Data.Infinities
 
-  open StrictTotalOrder (StrictTotalOrderT STO)
+  open StrictTotalOrder (StrictTotalOrderT STO) public
 
   infix  7 _■
   infixr 6 _,_∷_
