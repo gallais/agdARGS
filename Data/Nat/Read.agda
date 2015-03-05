@@ -2,7 +2,8 @@ module agdARGS.Data.Nat.Read where
 
 open import Data.Nat
 open import Data.Char
-open import Data.String
+open import Data.String as Str
+open import Data.Sum
 open import Data.Maybe as Maybe
 open import Data.List
 open import Category.Monad
@@ -21,9 +22,11 @@ parseDigit '8' = just 8
 parseDigit '9' = just 9
 parseDigit _   = nothing
 
-parseℕ : String → Maybe ℕ
-parseℕ = go ∘ reverse ∘ toList
+parseℕ : String → String ⊎ ℕ
+parseℕ str = maybe′ inj₂ failure $ go $ reverse $ toList str
   where
+    failure = inj₁ $ "Invalid Natural Number: " Str.++ str
+
     go : List Char → Maybe ℕ
     go []       = nothing
     go (x ∷ []) = parseDigit x
