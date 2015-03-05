@@ -1,9 +1,12 @@
-module agdARGS.Examples where
+module agdARGS.Examples.Examples where
 
 open import Level
 open import Data.Bool
+open import Data.Sum
+open import Data.Product
 open import Data.String
 open import Data.Maybe
+open import agdARGS.Data.Maybe
 open import Function
 
 open import agdARGS.Data.Arguments
@@ -16,6 +19,7 @@ open import Data.Unit
 open import Data.Empty
 
 open import Relation.Nullary
+open import agdARGS.Algebra.Magma
 
 inverse : Argument zero
 inverse = record
@@ -36,25 +40,27 @@ version = record
             ; domain      = None
             ; parser      = lift tt }
 
-rawMagmaList : {ℓ : Level} (A : Set ℓ) → RawMagma ℓ
-rawMagmaList A = record { Carrier = List A ; _∙_ = List._++_ }
-
 textFiles : Argument zero
 textFiles = record
               { name        = "Text Files"
               ; description = "Files to be dealt with"
               ; flag        = "-f"
               ; optional    = false
-              ; domain      = ALot (rawMagmaList String)
-              ; parser      = λ s → just (List.[ s ])
+              ; domain      = ALot (List.rawMagma String)
+              ; parser      = λ s → inj₂ (List.[ s ])
               }
 
-fromJust : ∀ {ℓ : Level} {A : Set ℓ} (a : Maybe A) {pr : maybe′ (const ⊤) ⊥ a} → A
-fromJust (just a) = a
-fromJust nothing {()}
-
 test : Arguments
-test = fromJust $ Args.fromList $ textFiles ∷ version ∷ inverse ∷ []
+test = version `∷ inverse `∷ `[]
 
 testArg : Dec _
 testArg = findArgument "-i" test
+
+testParse : List (String ⊎ ParseResult test (just textFiles))
+testParse = List.map (λ xs → parse xs (just textFiles) test) tests
+  where
+    parse₁ = "-i" ∷ "Filename.txt" ∷ "-V" ∷ "otherFileName.html" ∷ []
+    parse₂ = "Filename.txt" ∷ "-V" ∷ "otherFileName.html" ∷ []
+    parse₃ = "-V" ∷ []
+    tests  = parse₁ ∷ parse₂ ∷ parse₃ ∷ []
+

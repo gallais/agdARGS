@@ -12,12 +12,7 @@ open import Function
 open import Relation.Binary
 import Relation.Binary.On as On
 
-open import Algebra
-
-record RawMagma (ℓ : Level) : Set (suc ℓ) where
-  field
-    Carrier : Set ℓ
-    _∙_     : Carrier → Carrier → Carrier
+open import agdARGS.Algebra.Magma
 
 data Domain (ℓ : Level) : Set (suc ℓ) where
   None :                    Domain ℓ
@@ -86,6 +81,24 @@ module Arguments (ℓ : Level) where
                  Dec (Σ[ arg ∈ Argument ℓ ] (arg ∈ args × flag arg ≡ str))
   findArgument str = search Str._≟_ flag str
 
+  open import lib.Nullary
+
+  genericGet :
+    {m : Argument ℓ → Set ℓ} (args : Arguments)
+    (str : String) (opts : Options m args) →
+    dec (findArgument str args) (m ∘ proj₁) (const $ Lift ⊤)
+  genericGet {m} args str opts = dec′ C (findArgument str args) success failure
+    where
+      C : Dec _ → Set ℓ
+      C d = dec d (m ∘ proj₁) (const $ Lift ⊤)
+
+      success : ∀ p → C (yes p)
+      success (_ , pr , _) = getOptions m pr opts
+
+      failure : ∀ ¬p → C (no ¬p)
+      failure = const $ lift tt
+
+  get = genericGet {MaybeMode}
 
   open import Category.Monad
 
@@ -213,3 +226,4 @@ module Arguments (ℓ : Level) where
   parse xs args = preParse xs args >>= validate
     where open RawMonad Maybe.monad
 -}
+  open import agdARGS.Data.UniqueSortedList.SmartConstructors (strictTotalOrder ℓ) public
