@@ -28,7 +28,7 @@ parseℕ str = maybe′ inj₂ failure $ go $ reverse $ toList str
     failure = inj₁ $ "Invalid Natural Number: " Str.++ str
 
     go : List Char → Maybe ℕ
-    go []       = nothing
+    go []       = just 0
     go (x ∷ []) = parseDigit x
     go (x ∷ xs) = 
       parseDigit x >>= λ d →

@@ -33,3 +33,13 @@ module agdARGS.Data.Arguments.Instances (ℓ : Level) where
            ; domain      = ALot (List.rawMagma A)
            ; parser      = Sum.map id [_] ∘ p
            }
+
+  option : {A : Set ℓ} → (String → String ⊎ A) → Argument ℓ
+  option {A} p =
+    record { name        = "Default name"
+           ; description = "Default Description"
+           ; flag        = ""
+           ; optional    = true
+           ; domain      = Some A
+           ; parser      = p
+           }
