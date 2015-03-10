@@ -54,31 +54,38 @@ module Arguments (ℓ : Level) where
   Arguments : Set (suc ℓ)
   Arguments = UniqueSortedList -∞ +∞
 
-  options : (m : Argument ℓ → Set ℓ) {lb ub : _} (args : UniqueSortedList lb ub) → Set ℓ
-  options m (lt ■)           = Lift ⊤
-  options m (hd , lt ∷ args) = m hd × options m args
+  Mode : {lb ub : _} (args : UniqueSortedList lb ub) → Set (suc ℓ)
+  Mode args = (arg : Argument ℓ) (pr : arg ∈ args) → Set ℓ
+
+  ModeS : {lb ub : _} {hd : _} .{lt : lb < ↑ hd} {args : UniqueSortedList (↑ hd) ub} →
+          Mode (hd , lt ∷ args) → Mode args
+  ModeS m = λ arg → m arg ∘ s
+
+  options : {lb ub : _} (args : UniqueSortedList lb ub) (m : Mode args) → Set ℓ
+  options (lt ■)           m = Lift ⊤
+  options (hd , lt ∷ args) m = m hd z × options args (ModeS m)
 
   -- This is a trick to facilitate type inference: when `args` is
   -- instantiated, `options` will compute, making it impossible
   -- to reconstruct `args`'s value, but `Options` will stay stuck.
   -- This is why `get` uses `Options` (and takes `args` as an
   -- implicit argument) and `parse` produces it.
-  data Options (m : Argument ℓ → Set ℓ) (args : Arguments) : Set ℓ where
-    mkOptions : options m args → Options m args
+  data Options (args : Arguments) (m : Mode args) : Set ℓ where
+    mkOptions : options args m → Options args m
 
   getOptions :
-    (m : Argument ℓ → Set ℓ) {lb ub : _} {args : UniqueSortedList lb ub} {arg : Argument ℓ}
-    (pr : arg ∈ args) → options m args → m arg
+    {lb ub : _} {args : UniqueSortedList lb ub} (m : Mode args)
+    {arg : Argument ℓ} (pr : arg ∈ args) → options args m → m arg pr
   getOptions m z      = proj₁
-  getOptions m (s pr) = getOptions m pr ∘ proj₂
+  getOptions m (s pr) = getOptions (ModeS m) pr ∘ proj₂
 
   SetDomain : Domain ℓ → Set ℓ
   SetDomain = elimDomain {P = const $ Set ℓ} (Lift ⊤) id (RawMagma.Carrier)
 
-  MaybeMode : Argument ℓ → Set ℓ
-  MaybeMode = Maybe ∘ SetDomain ∘ domain
+  MaybeMode : {lb ub : _} {args : UniqueSortedList lb ub} → Mode args
+  MaybeMode = const ∘ Maybe ∘ SetDomain ∘ domain
 
-  defaultOptions : {lb ub : _} (args : UniqueSortedList lb ub) → options MaybeMode args
+  defaultOptions : {lb ub : _} (args : UniqueSortedList lb ub) → options args MaybeMode
   defaultOptions (lt ■)           = lift tt
   defaultOptions (hd , lt ∷ args) = nothing , defaultOptions args
 
@@ -92,56 +99,57 @@ module Arguments (ℓ : Level) where
   open import lib.Nullary
 
   genericGet :
-    {m : Argument ℓ → Set ℓ} {args : Arguments} (str : String) (opts : Options m args) →
-    dec (findArgument str args) (m ∘ proj₁) (const $ Lift ⊤)
-  genericGet {m} {args} str (mkOptions opts) = dec′ C (findArgument str args) success failure
+    {args : Arguments} {m : Mode args} (str : String) (opts : Options args m) →
+    dec (findArgument str args) (uncurry $ λ arg → m arg ∘ proj₁) (const $ Lift ⊤)
+  genericGet {args} {m} str (mkOptions opts) = dec′ C (findArgument str args) success failure
     where
       C : Dec _ → Set ℓ
-      C d = dec d (m ∘ proj₁) (const $ Lift ⊤)
+      C d = dec d (uncurry $ λ arg → m arg ∘ proj₁) (const $ Lift ⊤)
 
       success : ∀ p → C (yes p)
-      success (_ , pr , _) = getOptions m pr opts
+      success (arg , pr , _) = getOptions m pr opts
 
       failure : ∀ ¬p → C (no ¬p)
       failure = const $ lift tt
 
-  get = genericGet {MaybeMode}
+  get : {args : Arguments} (str : String) (opts : Options args MaybeMode) → _
+  get = genericGet
 
   open import Category.Monad
 
   mapMOptions :
      {M : Set ℓ → Set ℓ} (MM : RawMonad M) →
-     {lb ub : _} (args : UniqueSortedList lb ub) {f g : Argument ℓ → Set ℓ}
-     (upd : {arg : Argument ℓ} (pr : arg ∈ args) → f arg → M (g arg)) →
-     options f args → M (options g args)
+     {lb ub : _} (args : UniqueSortedList lb ub) {f g : Mode args}
+     (upd : (arg : Argument ℓ) (pr : arg ∈ args) → f arg pr → M (g arg pr)) →
+     options args f → M (options args g)
   mapMOptions MM (lt ■)         upd opts       = let open RawMonad MM in return opts
   mapMOptions MM (hd , lt ∷ xs) upd (v , opts) =
-    upd z v                          >>= λ w  →
-    mapMOptions MM xs (upd ∘ s) opts >>= λ ws →
+    upd hd z v                                   >>= λ w  →
+    mapMOptions MM xs (λ arg → upd arg ∘ s) opts >>= λ ws →
     return (w , ws)
     where open RawMonad MM
 
   updateMOptions :
      {M : Set ℓ → Set ℓ} (MM : RawMonad M) →
-     {lb ub : _} {args : UniqueSortedList lb ub} {f : Argument ℓ → Set ℓ}
-     {arg : Argument ℓ} (pr : arg ∈ args) (updArg : f arg → M (f arg)) →
-     options f args → M (options f args)
-  updateMOptions {M} MM {args = args} {f} {arg} pr updArgs = mapMOptions MM _ (upd pr updArgs)
+     {lb ub : _} {args : UniqueSortedList lb ub} {m : Mode args}
+     {arg : Argument ℓ} (pr : arg ∈ args) (f : m arg pr → M (m arg pr)) →
+     options args m → M (options args m)
+  updateMOptions {M} MM {args = args} {m} {arg} pr f = mapMOptions MM _ (upd m pr f)
     where
       open RawMonad MM
 
-      upd : {lb ub : _} {args : UniqueSortedList lb ub} {arg : Argument ℓ} →
-            arg ∈ args → (upd : f arg → M (f arg)) → 
-            {arg : Argument ℓ} → arg ∈ args → f arg → M (f arg)
-      upd z       f z       = f
-      upd z       f (s pr₂) = return
-      upd (s pr₁) f z       = return
-      upd (s pr₁) f (s pr₂) = upd pr₁ f pr₂
+      upd : {lb ub : _} {args : UniqueSortedList lb ub} (m : Mode args) {arg : Argument ℓ} →
+            (pr : arg ∈ args) (upd : m arg pr → M (m arg pr)) → 
+            (arg : Argument ℓ) (pr : arg ∈ args) → m arg pr → M (m arg pr)
+      upd m z       f arg z       = f
+      upd m z       f arg (s pr₂) = return
+      upd m (s pr₁) f arg z       = return
+      upd m (s pr₁) f arg (s pr₂) = upd (ModeS m) pr₁ f arg pr₂
 
   import agdARGS.Data.Sum as Sum
 
   set : {args : Arguments} {arg : Argument ℓ} (pr : arg ∈ args) (v : SetDomain (domain arg)) →
-        options MaybeMode args → String ⊎ options MaybeMode args
+        options args MaybeMode → String ⊎ options args MaybeMode
   set {_} {arg} pr v = updateMOptions (Sum.monad String) pr $ elimDomain {P = P} PNone PSome PALot (domain arg) v
     where
       P : Domain ℓ → Set ℓ
@@ -161,26 +169,26 @@ module Arguments (ℓ : Level) where
   open import Data.List using ([] ; _∷_ ; List)
   open import lib.Nullary
 
-  ParseResult : Arguments → Maybe (Argument ℓ) → Set ℓ
-  ParseResult args default = maybe′ MaybeMode (Lift ⊤) default × options MaybeMode args
+  ParseResult : (args : Arguments) → Maybe (Argument ℓ) → Set ℓ
+  ParseResult args default = maybe′ (Maybe ∘ SetDomain ∘ domain) (Lift ⊤) default × options args MaybeMode
 
   parse : List String → (default : Maybe (Argument ℓ)) (args : Arguments) →
-          String ⊎ maybe′ MaybeMode (Lift ⊤) default × Options MaybeMode args
+          String ⊎ maybe′ (Maybe ∘ SetDomain ∘ domain) (Lift ⊤) default × Options args MaybeMode
   parse xs default args = Sum.map id (Prod.map id mkOptions) $ go xs (initDefault , defaultOptions args)
     where
 
-      initDefault : maybe′ MaybeMode (Lift ⊤) default
-      initDefault = maybe {B = maybe′ MaybeMode (Lift ⊤)} (λ _ → nothing) (lift tt) default
+      initDefault : maybe′ (Maybe ∘ SetDomain ∘ domain) (Lift ⊤) default
+      initDefault = maybe {B = maybe′ (Maybe ∘ SetDomain ∘ domain) (Lift ⊤)} (λ _ → nothing) (lift tt) default
 
       failure : String → ParseResult args default → String ⊎ ParseResult args default
       failure x (opt , opts) =
         (case default
-         return (λ d → maybe MaybeMode (Lift ⊤) d → String ⊎ ParseResult args d)
+         return (λ d → maybe (Maybe ∘ SetDomain ∘ domain) (Lift ⊤) d → String ⊎ ParseResult args d)
          of λ { nothing    _ → inj₁ ("Invalid option: " ++ x)
               ; (just arg) →
                 (case (domain arg)
                 return (λ d → Parser d → Maybe (SetDomain d) →
-                              String ⊎ (Maybe (SetDomain d) × options MaybeMode args))
+                              String ⊎ (Maybe (SetDomain d) × options args MaybeMode))
                 of λ { None     p old → inj₁ "Defaulting should always work on a RawMagma"
                      ; (Some S) p old → inj₁ "Defaulting should always work on a RawMagma"
                      ; (ALot M) p old →
