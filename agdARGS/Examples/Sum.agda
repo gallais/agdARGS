@@ -41,6 +41,26 @@ output = record (option inj₂) { name = "Output" ; flag = "-o" ; description = 
 config : Arguments
 config = version `∷ input `∷ help `∷ output `∷ `[]
 
+open import Data.Unit
+fromNothing : {ℓ : Level} {A : Set ℓ} (ma : Maybe A) → Maybe ⊤
+fromNothing = maybe (const nothing) (just tt)
+
+open import Category.Monad
+import Data.Maybe as Maybe
+test : Options config MaybeMode → _
+test Opts =
+  just Opts ⟪ z           ← id          -- if version
+            ⟪ s z         ← fromNothing -- then input  forbidden
+            ⟪ s (s z)     ← fromNothing -- and  help   forbidden
+            ⟪ s (s (s z)) ← fromNothing -- and  output forbidden
+
+
+_⟨+⟩_ : {ℓ : Level} {A B : Set ℓ} (ma : Maybe A) → Maybe B → Maybe (maybe (const A) B ma)
+nothing ⟨+⟩ b = b
+just a  ⟨+⟩ _ = just a
+
+
+{-
 open import IO
 open import Coinduction
 import Data.Nat.Show as NatShow
@@ -70,3 +90,4 @@ main = run $
     readNatsFromFile fp =
       ♯ readFiniteFile fp >>= λ str →
       ♯ return (parseAll parseℕ $ lines str)
+-}

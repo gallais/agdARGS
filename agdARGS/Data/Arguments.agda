@@ -50,37 +50,137 @@ module Arguments (ℓ : Level) where
 
   open import agdARGS.Data.Infinities
   open import agdARGS.Data.UniqueSortedList (strictTotalOrder ℓ) public
+  open import agdARGS.Data.UniqueSortedList.SmartConstructors (strictTotalOrder ℓ) public
 
   Arguments : Set (suc ℓ)
   Arguments = UniqueSortedList -∞ +∞
 
-  Mode : {lb ub : _} (args : UniqueSortedList lb ub) → Set (suc ℓ)
-  Mode args = (arg : Argument ℓ) (pr : arg ∈ args) → Set ℓ
+  mode : (ℓᵐ : Level) {lb ub : _} (args : UniqueSortedList lb ub) → Set (suc ℓᵐ)
+  mode ℓᵐ (lt ■)         = Lift ⊤
+  mode ℓᵐ (hd , lt ∷ xs) = Set ℓᵐ × mode ℓᵐ xs
 
-  ModeS : {lb ub : _} {hd : _} .{lt : lb < ↑ hd} {args : UniqueSortedList (↑ hd) ub} →
-          Mode (hd , lt ∷ args) → Mode args
-  ModeS m = λ arg → m arg ∘ s
+  data _<_∈_<_by_
+    {ℓᵐ : Level} (arg : Argument ℓ) (S : Set ℓᵐ) :
+    {lb ub : _} (args : UniqueSortedList lb ub) (m : mode ℓᵐ args) (pr : arg ∈ args) → Set (suc (ℓ ⊔ ℓᵐ)) where
+    z : ∀ {lb ub} {xs : UniqueSortedList (↑ arg) ub} {m} .{lt : lb < ↑ arg} → arg < S ∈ arg , lt ∷ xs < S , m by z
+    s : ∀ {lb ub hd} {xs : UniqueSortedList (↑ hd) ub} {T m pr} .{lt : lb < ↑ hd}
+          (n : arg < S ∈ xs < m by pr) →
+          arg < S ∈ hd , lt ∷ xs < T , m by s pr
 
-  options : {lb ub : _} (args : UniqueSortedList lb ub) (m : Mode args) → Set ℓ
-  options (lt ■)           m = Lift ⊤
-  options (hd , lt ∷ args) m = m hd z × options args (ModeS m)
+  record Mode (ℓᵐ : Level) (args : Arguments) : Set (suc ℓᵐ) where
+    constructor mkMode
+    field
+      outMode : mode ℓᵐ args
+  open Mode
+
+  tabulateMode :
+    {ℓᵐ : Level} {lb ub : _} (args : UniqueSortedList lb ub)
+    (f : (arg : Argument ℓ) (pr : arg ∈ args) → Set ℓᵐ) →
+    mode ℓᵐ args
+  tabulateMode (lt ■)         f = lift tt
+  tabulateMode (hd , lt ∷ xs) f = f hd z , tabulateMode xs (λ arg → f arg ∘ s)
+  
+  infix 5 _‼_
+  _‼_ : {ℓᵐ : Level} {lb ub : _} {args : UniqueSortedList lb ub} (m : mode ℓᵐ args)
+        {arg : Argument ℓ} (pr : arg ∈ args) → Set ℓᵐ
+  (m , _)  ‼ z    = m
+  (_ , ms) ‼ s pr = ms ‼ pr
+
+  singleton : 
+    {ℓᵐ : Level} {arg : Argument ℓ} {lb ub : _} {args : UniqueSortedList lb ub}
+    (m : mode ℓᵐ args) (pr : arg ∈ args) → arg < m ‼ pr ∈ args < m by pr
+  singleton m z      = z
+  singleton m (s pr) = s (singleton (proj₂ m) pr)
+
+  infixl 6 _⟨_∷=_
+  _⟨_∷=_ : {ℓᵐ : Level} {lb ub : _} {args : UniqueSortedList lb ub} (m : mode ℓᵐ args)
+           {arg : Argument ℓ} (pr : arg ∈ args) (S : Set ℓᵐ) → mode ℓᵐ args
+  (_ , ms) ⟨ z    ∷= S = S , ms
+  (m , ms) ⟨ s pr ∷= S = m , ms ⟨ pr ∷= S
+
+{-
+  _⊨_→M_ : (M : Set ℓ → Set ℓ) {lb ub : _} {args : UniqueSortedList lb ub} (m n : mode ℓᵐ args) → Set (suc ℓᵐ)
+  M ⊨ m →M n = {arg : Argument ℓ} (pr : arg ∈ _) → m ‼ pr → M $ n ‼ pr
+-}
+
+  options : {ℓᵐ : Level} {lb ub : _} (args : UniqueSortedList lb ub) (m : mode ℓᵐ args) → Set ℓᵐ
+  options (lt ■)           _        = Lift ⊤
+  options (hd , lt ∷ args) (m , ms) = m × options args ms
 
   -- This is a trick to facilitate type inference: when `args` is
   -- instantiated, `options` will compute, making it impossible
   -- to reconstruct `args`'s value, but `Options` will stay stuck.
   -- This is why `get` uses `Options` (and takes `args` as an
   -- implicit argument) and `parse` produces it.
-  data Options (args : Arguments) (m : Mode args) : Set ℓ where
-    mkOptions : options args m → Options args m
+  record Options {ℓᵐ : Level} (args : Arguments) (m : Mode ℓᵐ args) : Set ℓᵐ where
+    constructor mkOptions
+    field
+      outOptions : options args (outMode m)
+  open Options
 
   getOptions :
-    {lb ub : _} {args : UniqueSortedList lb ub} (m : Mode args)
-    {arg : Argument ℓ} (pr : arg ∈ args) → options args m → m arg pr
-  getOptions m z      = proj₁
-  getOptions m (s pr) = getOptions (ModeS m) pr ∘ proj₂
+    {ℓᵐ : Level} {lb ub : _} {args : UniqueSortedList lb ub} (m : mode ℓᵐ args)
+    {arg : Argument ℓ} (pr : arg ∈ args) → options args m → m ‼ pr
+  getOptions m        z      = proj₁
+  getOptions (_ , ms) (s pr) = getOptions ms pr ∘ proj₂
+
+  open import Category.Monad
+
+  infixl 6 _⟪_←[_]_ _⟪_←_
+  _⟪_←[_]_ :
+    {ℓᵐ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
+    {m : mode ℓᵐ args} (opts : options args m) {arg : Argument ℓ} {pr : arg ∈ args}
+    {S T : Set ℓᵐ} → arg < S ∈ args < m by pr → 
+    {M : Set ℓᵐ → Set ℓᵐ} (MM : RawMonad M) (f : S → M T) → M $ options args (m ⟨ pr ∷= T)
+  (opt , opts) ⟪ z    ←[ MM ] f = let open RawMonad MM in flip _,_ opts <$> f opt
+  (opt , opts) ⟪ s pr ←[ MM ] f = let open RawMonad MM in _,_ opt       <$> opts ⟪ pr ←[ MM ] f
+
+  _⟪_←_ :
+    {ℓᵐ : Level} {args : Arguments} {m : Mode ℓᵐ args}
+    (opts : Maybe $ Options args m)
+    {arg : Argument ℓ} {pr : arg ∈ args} {S : Set ℓᵐ} → arg < Maybe S ∈ args < outMode m by pr →
+    {T : Set ℓᵐ} (f : Maybe S → Maybe T) → Maybe $ Options args (mkMode (outMode m ⟨ pr ∷= T))
+  opts ⟪ pr ← f = mkOptions <$> (opts >>= λ opts → (outOptions opts ⟪ pr ←[ Maybe.monad ] f))
+    where open RawMonad Maybe.monad
 
   SetDomain : Domain ℓ → Set ℓ
   SetDomain = elimDomain {P = const $ Set ℓ} (Lift ⊤) id (RawMagma.Carrier)
+
+  IdentityMode : {lb ub : _} {args : UniqueSortedList lb ub} → mode ℓ args
+  IdentityMode = tabulateMode _ $ const ∘ SetDomain ∘ domain
+
+  MaybeMode : {args : Arguments} → Mode ℓ args
+  MaybeMode = mkMode $ tabulateMode _ $ const ∘ Maybe ∘ SetDomain ∘ domain
+
+{-
+  [_]_⟪_←_ :
+    {ℓᵐ : Level} {args : Arguments}
+    {M : Set ℓᵐ → Set ℓᵐ} (MM : RawMonad M)
+    {m : Mode ℓᵐ args} (opts : M (Options args m)) {arg : Argument ℓ}
+    (pr : arg ∈ args) {S : Set ℓᵐ} (f : outMode m ‼ pr → M S) → M $ Options args (mkMode (outMode m ⟨ pr ∷= S))
+  [ MM ] mopts ⟪ pr ← f =
+    let open RawMonad MM in
+    mopts >>= λ opts → mkOptions <$> outOptions opts ⟪ pr ←[ MM ] f
+
+  -- this is not going to work. Maybe we simply need something
+  -- simpler: a way to combine various validation processes. At
+  -- the variable level, we may describe them using _⟪_←[_]_ but
+  -- we should be able to compose them!
+  --_isMandatory : 
+  --  {ℓᵐ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
+  --  {m : mode ℓᵐ args} {arg : Argument ℓ} (pr : arg ∈ args) →
+  --  options args MaybeMode → Maybe $ options args (MaybeMode ⟨ pr ∷= SetDomain (domain arg))
+  --(pr isMandatory) opts = opts ⟪ pr ←[ monad ] {!!}
+-}
+{-
+  (_ , opts) ⟪ z    ∷= opt = opt , opts
+  (v , opts) ⟪ s pr ∷= opt = v , opts ⟪ pr ∷= opt
+
+  SetDomain : Domain ℓ → Set ℓ
+  SetDomain = elimDomain {P = const $ Set ℓ} (Lift ⊤) id (RawMagma.Carrier)
+
+  IdentityMode : {lb ub : _} {args : UniqueSortedList lb ub} → Mode args
+  IdentityMode = const ∘ SetDomain ∘ domain
 
   MaybeMode : {lb ub : _} {args : UniqueSortedList lb ub} → Mode args
   MaybeMode = const ∘ Maybe ∘ SetDomain ∘ domain
@@ -119,32 +219,63 @@ module Arguments (ℓ : Level) where
 
   mapMOptions :
      {M : Set ℓ → Set ℓ} (MM : RawMonad M) →
-     {lb ub : _} (args : UniqueSortedList lb ub) {f g : Mode args}
-     (upd : (arg : Argument ℓ) (pr : arg ∈ args) → f arg pr → M (g arg pr)) →
-     options args f → M (options args g)
-  mapMOptions MM (lt ■)         upd opts       = let open RawMonad MM in return opts
-  mapMOptions MM (hd , lt ∷ xs) upd (v , opts) =
-    upd hd z v                                   >>= λ w  →
-    mapMOptions MM xs (λ arg → upd arg ∘ s) opts >>= λ ws →
+     {lb ub : _} (args : UniqueSortedList lb ub)
+     {f g : Mode args} (φ : M ⊨ f →M g) → options args f → M (options args g)
+  mapMOptions MM (lt ■)         φ opts       = let open RawMonad MM in return opts
+  mapMOptions MM (hd , lt ∷ xs) φ (v , opts) =
+    φ hd z v                                   >>= λ w  →
+    mapMOptions MM xs (λ arg → φ arg ∘ s) opts >>= λ ws →
     return (w , ws)
     where open RawMonad MM
+
+  _⊨if≡_then_else_ :
+    (M : Set ℓ → Set ℓ) {lb ub : _} {args : UniqueSortedList lb ub} {m n : Mode args}
+    {arg : Argument ℓ} (pr : arg ∈ args) (f : m arg pr → M (n arg pr)) →
+    (g : M ⊨ m →M n) → M ⊨ m →M n
+  (M ⊨if≡ z     then f else g) arg z       v = f v
+  (M ⊨if≡ s pr₁ then f else g) arg (s pr₂) v = (M ⊨if≡ pr₁ then f else (λ arg → g arg ∘ s)) arg pr₂ v
+  (M ⊨if≡ z     then f else g) arg (s pr₂) v = g arg (s pr₂) v
+  (M ⊨if≡ s pr₁ then f else g) arg z       v = g arg z v
+
+  if≡_then_else_ :
+    {lb ub : _} {args : UniqueSortedList lb ub} {ℓᵖ : Level}
+    {P : (arg : Argument ℓ) (pr : arg ∈ args) → Set ℓᵖ}
+    {arg : Argument ℓ} (pr : arg ∈ args) (p : P arg pr) →
+    (m : (arg : Argument ℓ) (pr : arg ∈ args) → P arg pr) → 
+    (arg : Argument ℓ) (pr : arg ∈ args) → P arg pr
+  (if≡ z     then p else m) arg z       = p
+  (if≡ s pr₁ then p else m) arg (s pr₂) = (if≡ pr₁ then p else (λ arg → m arg ∘ s)) arg pr₂
+  (if≡ z     then p else m) arg (s pr₂) = m arg (s pr₂)
+  (if≡ s pr₁ then p else m) arg z       = m arg z
+
+  branch :
+    {lb ub : _} {args : UniqueSortedList lb ub} {ℓPQ : Level}
+    (P : (arg : Argument ℓ) (pr : arg ∈ args) → Set ℓPQ)
+    (Q : (arg : Argument ℓ) (pr : arg ∈ args) → Set ℓPQ)
+    {arg : Argument ℓ} (pr₁ : arg ∈ args) (p : P arg pr₁) →
+    (m : (arg : Argument ℓ) (pr : arg ∈ args) → Q arg pr) → 
+    (arg : Argument ℓ) (pr₂ : arg ∈ args) → (if≡ pr₁ then P _ pr₁ else Q) arg pr₂
+  branch P Q z       p m arg z       = p
+  branch P Q z       p m arg (s pr₂) = m arg (s pr₂)
+  branch P Q (s pr₁) p m arg z       = m arg z
+  branch P Q (s pr₁) p m arg (s pr₂) = branch P′ Q′ pr₁ p (λ arg → m arg ∘ s) arg pr₂
+    where P′ = λ arg → P arg ∘ s
+          Q′ = λ arg → Q arg ∘ s
+
+  _isMandatory :
+    {lb ub : _} {args : UniqueSortedList lb ub} {arg : Argument ℓ}
+    (pr : arg ∈ args) → options args MaybeMode →
+    Maybe $ options args (if≡ pr then (IdentityMode arg pr) else MaybeMode)
+  pr₁ isMandatory = mapMOptions monad _ (λ arg pr₂ v → 
+       let w val = branch IdentityMode MaybeMode pr₁ val {!!} {!!} pr₂
+       in maybe {!just ∘ w!} {!!} v)
 
   updateMOptions :
      {M : Set ℓ → Set ℓ} (MM : RawMonad M) →
      {lb ub : _} {args : UniqueSortedList lb ub} {m : Mode args}
      {arg : Argument ℓ} (pr : arg ∈ args) (f : m arg pr → M (m arg pr)) →
      options args m → M (options args m)
-  updateMOptions {M} MM {args = args} {m} {arg} pr f = mapMOptions MM _ (upd m pr f)
-    where
-      open RawMonad MM
-
-      upd : {lb ub : _} {args : UniqueSortedList lb ub} (m : Mode args) {arg : Argument ℓ} →
-            (pr : arg ∈ args) (upd : m arg pr → M (m arg pr)) → 
-            (arg : Argument ℓ) (pr : arg ∈ args) → m arg pr → M (m arg pr)
-      upd m z       f arg z       = f
-      upd m z       f arg (s pr₂) = return
-      upd m (s pr₁) f arg z       = return
-      upd m (s pr₁) f arg (s pr₂) = upd (ModeS m) pr₁ f arg pr₂
+  updateMOptions {M} MM pr f = mapMOptions MM _ (M ⊨if≡ pr then f else (λ _ _ → RawMonad.return MM))
 
   import agdARGS.Data.Sum as Sum
 
@@ -243,3 +374,4 @@ module Arguments (ℓ : Level) where
     where open RawMonad Maybe.monad
 -}
   open import agdARGS.Data.UniqueSortedList.SmartConstructors (strictTotalOrder ℓ) public
+-}
