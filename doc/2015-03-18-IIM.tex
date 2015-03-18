@@ -142,6 +142,7 @@ parseOptions args =
 \begin{frame}[fragile]{A few issues}
   \begin{itemize}
     \item I don't want to have to write this for every app
+    \item I'm not even dealing with options yet
     \item This is not even ready for consumption yet!
       \begin{minted}{haskell}
        regexp : Maybe String
@@ -196,9 +197,12 @@ parserType (ALot M) = String -> String || carrier M
 \subsection{Types - Keep your neighbours in order}
 
 \begin{frame}{The type of extensible records}
-  McBride to the rescue: How to keep your neighbours in order
+  McBride to the rescue: "How to keep your neighbours in order" tells
+  us how to build in the invariant stating that a tree's leaves are
+  sorted.
 
-  The special case of lists, using a \emph{strict} total order:
+  In the special case of linked lists, using a \emph{strict} total
+  order, we move from:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}[t]
@@ -206,9 +210,27 @@ parserType (ALot M) = String -> String || carrier M
 \begin{tikzpicture}[list/.style={rectangle split, rectangle split parts=2,
     draw, rectangle split horizontal}, >=stealth, start chain]
 
-  \node[list,on chain] (A) {{\color{red}-$\infty$} < {\color{ForestGreen}12}};
-  \node[list,on chain] (B) {{\color{gray}12} < {\color{ForestGreen}99}};
-  \node[list,on chain] (C) {{\color{gray}99} < {\color{ForestGreen}128}};
+  \node[list,on chain] (A) {12};
+  \node[list,on chain] (B) {99};
+  \node[list,on chain] (C) {128};
+  \node[on chain,draw, inner sep=6pt] (D) {};
+  \draw (D.north west) -- (D.south east);
+  \draw (D.north east) -- (D.south west);
+  \draw[*->] let \p1 = (A.two), \p2 = (A.center) in (\x1,\y2) -- (B);
+  \draw[*->] let \p1 = (B.two), \p2 = (B.center) in (\x1,\y2) -- (C);
+  \draw[*->] let \p1 = (C.two), \p2 = (C.center) in (\x1,\y2) -- (D);
+\end{tikzpicture}
+\end{figure}
+
+  To the proven ordered:
+
+\begin{figure}[t]
+\begin{tikzpicture}[list/.style={rectangle split, rectangle split parts=2,
+    draw, rectangle split horizontal}, >=stealth, start chain]
+
+  \node[list,on chain] (A) {{\color{red}-$\infty$} < 12};
+  \node[list,on chain] (B) {{\color{gray}12} < 99};
+  \node[list,on chain] (C) {{\color{gray}99} < 128};
   \node[on chain,draw] (D) {{\color{gray}128} < {\color{red}+$\infty$}};
   \draw[*->] let \p1 = (A.two), \p2 = (A.center) in (\x1,\y2) -- (B);
   \draw[*->] let \p1 = (B.two), \p2 = (B.center) in (\x1,\y2) -- (C);
@@ -220,45 +242,120 @@ parserType (ALot M) = String -> String || carrier M
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \end{frame}
 
-\begin{frame}[fragile]
+\begin{frame}[fragile]{Key ideas}
+
+  Extend any ordered set with +/-infinity:
+  \begin{minted}{haskell}
+  data [_] {l : Level} (A : Set l) : Set l where
+    -infty :            [ A ]
+    emb_   : (a : A) -> [ A ]
+    +infty :            [ A ]
+  \end{minted}
+
+  Define a type of ordered lists:
   \begin{minted}{haskell}
   data USL (lb ub : Carrier) : Set _ where
     []     : lb < ub -> USL lb ub
     _,_::_ : hd (lt : lb < emb hd) (tl : USL (emb hd) ub) ->
              USL lb ub
   \end{minted}
+
+  Top level type: relax the bounds as much as possible!
+  \begin{minted}{haskell}
+  Arguments = USL -infty +infty
+  \end{minted}
 \end{frame}
 
-\begin{frame}
+\begin{frame}[fragile]{}
+  As a consequence:
+
+  \begin{itemize}
+    \item really easy to write the correct:
+      {\small\mintinline{haskell}{insertM : lb < x < ub -> USL lb ub -> Maybe (USL lb ub)}}
+
+    rather than the intuitive:
+      {\small \mintinline{haskell}{insertM : x -> USL lb ub -> Maybe (USL (min lb x) (max x ub))}}
+
+    \item We can search for values satisfying a decidable property:
+
+      \mintinline{haskell}{search : (d : Decidable R) f (a : A) (xs : USL lb ub) ->}
+      \mintinline{haskell}{Dec (el ** el inUSL xs ** R (f el) a))}
+  \end{itemize}
+
+  where \mintinline{haskell}{_inUSL_} are fancy de Bruijn indices:
+  \begin{minted}{haskell}
+  data _inUSL_ (a : _) : USL lb ub -> Set _ where
+    z :               a inUSL a , lt :: xs
+    s : a inUSL xs -> a inUSL b , lt :: xs
+  \end{minted}
 \end{frame}
 
 \subsection{Terms}
 
-\begin{frame}[fragile]
-Jon Sterling to the rescue: "Vinyl: Modern Records for Haskell."
+\begin{frame}[fragile]{The values of type an extensible record}
+  Jon Sterling to the rescue: "Vinyl: Modern Records for Haskell" tells
+  us what they should look like.
 
 \begin{minted}{haskell}
   Mode : (args : USL lb ub) -> Set (suc l)
   Mode args = arg (pr : arg inUSL args) -> Set l
 
   options : (args : USL lb ub) (m : Mode args) -> Set l
-  options []                m = Lift 1
-  options (hd , lt :: args) m = m hd z * options args _
-
+  options []                m = Lift Unit
+  options (hd , lt :: args) m = m hd 0 * options args m'
 \end{minted}
-
 \end{frame}
 
-\begin{frame}
+\begin{frame}[fragile]{Benefits}
+  \begin{itemize}
+    \item Mode morphisms $\Rightarrow$ record morphisms
+    \item \mintinline{haskell}{get} through \mintinline{haskell}{search} +
+          \mintinline{haskell}{lookup : (pr : x inUSL args)}
+          \mintinline{haskell}{(opts : options args m) -> m x pr}
+    \item generic parsing function!
+          \mintinline{haskell}{parse : List String -> (args : Arguments) ->}
+          \mintinline{haskell}{String || options args MaybeMode}
+    \item generic usage function!
+          \mintinline{haskell}{usage : Arguments -> String}
+  \end{itemize}
+
 \end{frame}
 
 \section{Design a nice interface}
 \begin{frame}[fragile]{We can \textbf{run} an awful lot at \textbf{compile time}}
-Our users will only ever use concrete CLI descriptions. As such, a
-lot of the decision procedure can be run at compile time thus offering
-a nicer interface.
 
+  \begin{itemize}
+    \item Type-rich structures internally
+    \item Decidability on concrete instances externally (smart constructors)
+  \end{itemize}
+
+  For instance using \texttt{fromJust}:
+
+\begin{minted}{haskell}
+fromJust : (a : Maybe A) {pr : maybe (\_ -> Unit) Void a}
+           -> A
+fromJust (just a) {pr} = a
+fromJust nothing  {()}
+\end{minted}
+
+  we can turn \mintinline{haskell}{insertM : x (xs : Arguments) -> Maybe Arguments}
+  into:
+
+\begin{minted}{haskell}
+insert : x (xs : Arguments) {pr : _} -> Arguments
+insert x xs = fromJust (insertM x xs)
+\end{minted}
 \end{frame}
 
+\section{Conclusion}
+
+\begin{frame}{Future Work}
+  \begin{itemize}
+    \item Validation (DSL to write Mode morphisms?)
+    \item Clean up the interface
+    \item More parsers for base types
+    \item Identify the utilities worth sending upstream
+  \end{itemize}
+\end{frame}
 
 \end{document}
