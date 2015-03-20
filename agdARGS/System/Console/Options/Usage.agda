@@ -1,11 +1,11 @@
 open import Level using (Level)
 
-module agdARGS.Data.Arguments.Usage (ℓ : Level) where
+module agdARGS.System.Console.Options.Usage (ℓ : Level) where
 
-  open import agdARGS.Data.Arguments
-  module Args = Arguments ℓ
-  open Args
-  open Argument
+  open import agdARGS.System.Console.Options
+  private module Opts = Options ℓ
+  open Opts
+  open Option
 
   open import Data.Nat
   open import Data.Product
@@ -17,7 +17,7 @@ module agdARGS.Data.Arguments.Usage (ℓ : Level) where
   open import Data.List as List using (List)
   import agdARGS.Data.List as List
 
-  usage : Arguments → String
+  usage : Options → String
   usage args = let (n , f) = go args in
                unlines $ "Flags and Options:" List.∷ f n
     where

@@ -14,51 +14,50 @@ import agdARGS.Data.List as List
 open import Function
 open import lib.Nullary
 
-open import agdARGS.Data.Arguments
-module Args = Arguments Level.zero
-open Args
-open import agdARGS.Data.Arguments.Instances Level.zero
-open import agdARGS.Data.Arguments.Usage     Level.zero
+
+open import agdARGS.System.Console.CLI
 
 open import agdARGS.Algebra.Magma
 open import agdARGS.Data.Nat.Read
 
-nats : Argument Level.zero
+nats : Option Level.zero
 nats = record (lotsOf parseℕ) { name = "Nats" ; description = "Natural numbers to sum" }
 
-version : Argument Level.zero
+version : Option Level.zero
 version = record flag { name = "Version" ; flag = "-V" ; description = "Print the version number" }
 
-help : Argument Level.zero
+help : Option Level.zero
 help = record flag { name = "Help" ; flag = "--help" ; description = "Print this help" }
 
-input : Argument Level.zero
+input : Option Level.zero
 input = record (option inj₂) { name = "Input" ; flag = "-i" ; description = "Read nats from a file" }
 
-output : Argument Level.zero
+output : Option Level.zero
 output = record (option inj₂) { name = "Output" ; flag = "-o" ; description = "Output sum to a file" }
 
-config : Arguments
-config = version `∷ input `∷ help `∷ output `∷ `[]
+config : CLI
+config = record { default = just nats
+                ; options = version `∷ input `∷ help `∷ output `∷ `[] }
+open CLValue
 
 open import IO
 open import Coinduction
 import Data.Nat.Show as NatShow
-open import agdARGS.Examples.Bindings.Arguments
+open import agdARGS.System.Environment.Arguments
 
 main : _
 main = run $
   ♯ getArgs >>= λ args →
   ♯ [ putStrLn ∘ String._++_ "*** Error: "
-    , (uncurry $ λ ns opts →
-        if      is-just $ get "--help" opts then putStrLn $ usage config
-        else if is-just $ get "-V" opts     then putStrLn "Sum: version 0.9"
-        else ♯ maybe′ readNatsFromFile (return $ validateNats ns) (get "-i" opts) >>= λ ns →
+    , (λ cliv →
+        if      is-just $ get "--help" cliv then putStrLn $ usage (CLI.options config)
+        else if is-just $ get "-V"     cliv then putStrLn "Sum: version 0.9"
+        else ♯ maybe′ readNatsFromFile (return $ validateNats $ default cliv) (get "-i" cliv) >>= λ ns →
              ♯ let sum = NatShow.show ∘ foldl _+_ 0 <$> ns in
                [ putStrLn ∘ String._++_ "*** Error: "
-               , maybe′ writeFile putStrLn (get "-o" opts) ]′ sum
-        )
-      ]′ (parse args (just nats) config)
+               , maybe′ writeFile putStrLn (get "-o" cliv) ]′ sum
+       ) 
+      ]′ (parseArgs config args)
   where
     open import Category.Monad
     open RawMonad (Sum.monad String) using (_<$>_)

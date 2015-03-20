@@ -1,6 +1,6 @@
 open import Level
 
-module agdARGS.Data.Arguments.Instances (ℓ : Level) where
+module agdARGS.System.Console.Options.Instances (ℓ : Level) where
 
   open import Data.Unit
   open import Data.Bool
@@ -10,11 +10,12 @@ module agdARGS.Data.Arguments.Instances (ℓ : Level) where
   open import Function
 
   open import agdARGS.Algebra.Magma
-  open import agdARGS.Data.Arguments
-  module Args = Arguments ℓ
-  open Args
+  open import agdARGS.System.Console.Options.Domain
+  open import agdARGS.System.Console.Options
+  private module Opts = Options ℓ
+  open Opts
 
-  flag : Argument ℓ
+  flag : Option ℓ
   flag =
     record { name        = "Default name"
            ; description = "Default Description"
@@ -24,7 +25,7 @@ module agdARGS.Data.Arguments.Instances (ℓ : Level) where
            ; parser      = lift tt
            }
 
-  lotsOf : {A : Set ℓ} → (String → String ⊎ A) → Argument ℓ
+  lotsOf : {A : Set ℓ} → (String → String ⊎ A) → Option ℓ
   lotsOf {A} p =
     record { name        = "Default name"
            ; description = "Default Description"
@@ -34,7 +35,7 @@ module agdARGS.Data.Arguments.Instances (ℓ : Level) where
            ; parser      = Sum.map id [_] ∘ p
            }
 
-  option : {A : Set ℓ} → (String → String ⊎ A) → Argument ℓ
+  option : {A : Set ℓ} → (String → String ⊎ A) → Option ℓ
   option {A} p =
     record { name        = "Default name"
            ; description = "Default Description"
