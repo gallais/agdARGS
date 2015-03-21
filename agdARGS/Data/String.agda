@@ -8,16 +8,23 @@ open import agdARGS.Data.Sum as Sum
 open import Data.Char as Char
 open import Data.String hiding (unlines)
 open import Data.List as List using (List)
+open import Data.Vec as Vec using (Vec)
 import agdARGS.Data.List as List
 open import lib.Nullary
 open import Category.Monad
 open import Function
 
-concat : List String → String
-concat = List.foldr _++_ ""
+fromVec : {n : ℕ} → Vec Char n → String
+fromVec = fromList ∘ Vec.toList
+
+concatList : List String → String
+concatList = List.foldr _++_ ""
+
+concatVec : {n : ℕ} → Vec String n → String
+concatVec = Vec.foldr _ _++_ ""
 
 unlines : List String → String
-unlines = concat ∘ List.intersperse "\n"
+unlines = concatList ∘ List.intersperse "\n"
 
 replicate : ℕ → Char → String
 replicate n = fromList ∘ List.replicate n

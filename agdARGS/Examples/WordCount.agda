@@ -10,10 +10,12 @@ open import Data.Product
 open import Data.Sum
 open import Data.Maybe
 open import Data.String as String
-open import Data.List
+open import Data.Vec as Vec hiding (_>>=_)
+open import Data.List as List
 open import Data.Char
 open import Function
 import agdARGS.Data.String as Str
+open import agdARGS.Data.Table as Table
 open import agdARGS.System.Environment.Arguments
 open import agdARGS.System.Console.CLI
 
@@ -60,36 +62,16 @@ FilePath = String
 
 showCounts : List (FilePath × count) → String
 showCounts xs =
-  let (m , n , str) = foldl cons nil xs
-  in Str.unlines $ reverse $ str m n
-
+  Table.show $ ("FilePath" ∷ "Lines" ∷ "Words" ∷ [])
+             ∷ (Vec.fromList $ List.map showRow xs)
   where
-
-    nil : ℕ × ℕ × (ℕ → ℕ → List String)
-    nil = Str.length "FilePath" , Str.length "Lines" , λ m n →
-          ("FilePath"                               String.++
-           Str.replicate ((2 + m) ∸ Str.length "FilePath") ' ' String.++
-           "Lines"                                             String.++
-           Str.replicate ((2 + n) ∸ Str.length "Lines") ' '    String.++
-           "Words") ∷ []
-
-    cons : (ℕ × ℕ × (ℕ → ℕ → List String)) → FilePath × count → (ℕ × ℕ × (ℕ → ℕ → List String))
-    cons (s₁ , s₂ , str) (fp , cnt) =
-      let fp-length = Str.length fp
-          `nb-lines = NatShow.show $ nb-lines cnt
-          nb-length = Str.length `nb-lines
-      in s₁ Nat.⊔ fp-length
-       , s₂ Nat.⊔ nb-length
-       , λ m n →
-          (fp                                      String.++
-           Str.replicate ((2 + m) ∸ fp-length) ' ' String.++
-           `nb-lines                               String.++
-           Str.replicate ((2 + n) ∸ nb-length) ' ' String.++
-           NatShow.show (nb-words cnt))
-           ∷ str m n
+    showRow : (FilePath × count) → Vec String 3
+    showRow (fp , cnt) =
+      let lws = nb-lines cnt ∷ nb-words cnt ∷ []
+      in fp ∷ Vec.map NatShow.show lws
 
 wc : List Char → count
-wc = proj₁ ∘ foldl (uncurry cons) nil
+wc = proj₁ ∘ List.foldl (uncurry cons) nil
   where
     cons : (C : count) (f : Bool) (c : Char) → Σ count (λ _ → Bool)
     cons C f ' '  = C , false
@@ -119,7 +101,7 @@ main = run $
 
     treatFiles : List FilePath → _
     treatFiles fps =
-      ♯ (wc ∘ toList onFiniteFiles fps) >>= λ counts →
+      ♯ (wc ∘ String.toList onFiniteFiles fps) >>= λ counts →
       ♯ (putStrLn $ showCounts counts)
 
     success : CLValue cli (MaybeCLMode cli) → _
