@@ -60,15 +60,18 @@ open count
 
 FilePath = String
 
-showCounts : List (FilePath × count) → String
-showCounts xs =
-  Table.show $ ("FilePath" ∷ "Lines" ∷ "Words" ∷ [])
-             ∷ (Vec.fromList $ List.map showRow xs)
-  where
-    showRow : (FilePath × count) → Vec String 3
-    showRow (fp , cnt) =
-      let lws = nb-lines cnt ∷ nb-words cnt ∷ []
-      in fp ∷ Vec.map NatShow.show lws
+showCounts : CLValue cli (MaybeCLMode cli) → List (FilePath × count) → String
+showCounts clv xs =
+  let keepLines = is-just (get "-l" clv) ∨ is-nothing (get "-w" clv) -- either "-l" is set or none are
+      keepWords = is-just (get "-w" clv) ∨ is-nothing (get "-l" clv) -- either "-w" is set or none are
+  in Table.show $ showCol true      "FilePath" proj₁
+                ∥ showCol keepLines "Lines"    (NatShow.show ∘ nb-lines ∘ proj₂)
+                ∥ showCol keepWords "Words"    (NatShow.show ∘ nb-words ∘ proj₂)
+    where
+      showCol : (b : Bool) (str : String) (f : (FilePath × count) → String) →
+                Table (Nat.suc $ List.length xs) (if b then 1 else 0) String
+      showCol true  str f = (str ∷ []) ∷ Vec.map (Vec.[_] ∘ f) (Vec.fromList xs)
+      showCol false str f = []         ∷ Vec.map (const [])    (Vec.fromList xs)
 
 wc : List Char → count
 wc = proj₁ ∘ List.foldl (uncurry cons) nil
@@ -99,13 +102,13 @@ main = run $
     error : String → _
     error = putStrLn ∘ (String._++_ "*** Error: ")
 
-    treatFiles : List FilePath → _
-    treatFiles fps =
+    treatFiles : CLValue cli (MaybeCLMode cli) → List FilePath → _
+    treatFiles cliv fps =
       ♯ (wc ∘ String.toList onFiniteFiles fps) >>= λ counts →
-      ♯ (putStrLn $ showCounts counts)
+      ♯ (putStrLn $ showCounts cliv counts)
 
     success : CLValue cli (MaybeCLMode cli) → _
     success cliv =
-           if is-just $ get "--help" cliv    then putStrLn $ usage (CLI.options cli)
+           if is-just $ get "--help"    cliv then putStrLn $ usage (CLI.options cli)
       else if is-just $ get "--version" cliv then putStrLn "WordCount: version 0.1"
-      else maybe′ treatFiles (error "No file provided") (CLValue.default cliv)
+      else maybe′ (treatFiles cliv) (error "No file provided") (CLValue.default cliv)

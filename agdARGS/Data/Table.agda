@@ -14,6 +14,10 @@ open import Category.Applicative
 Table : (m n : ℕ) {ℓ : Level} (A : Set ℓ) → Set ℓ
 Table m n A = Vec (Vec A n) m
 
+infixr 3 _∥_
+_∥_ : {m n p : ℕ} {ℓ : Level} {A : Set ℓ} → Table m n A → Table m p A → Table m (n + p) A
+xs ∥ ys = Vec.zipWith Vec._++_ xs ys
+
 functor : {m n : ℕ} {ℓ : Level} → RawFunctor (Table m n {ℓ})
 functor = record { _<$>_ = map ∘ map }
 
