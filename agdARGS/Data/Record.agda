@@ -15,7 +15,7 @@ open import Category.Applicative
 -- to represent this set by a UniqueSortedList in order to ensure
 -- unicity of field names. Hence the following import:
 
-open import agdARGS.Data.UniqueSortedList STO
+open import agdARGS.Data.UniqueSortedList STO public
 
 -- We then need to define what the content of each one of these
 -- fields is. This is taken care of by associating a set to each
@@ -28,7 +28,7 @@ record Fields (ℓ : Level) {lb ub : _} (args : UniqueSortedList lb ub) : Set (s
   constructor mkFields
   field
     content : [Fields] ℓ args
-open Fields
+open Fields public
 
 [A[_,_]] : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} →
            (a : Set ℓ → Set ℓ) → [Fields] ℓ args → [Fields] ℓ args
@@ -49,7 +49,7 @@ record Record {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub) (f : Fie
   constructor mkRecord
   field
     fields : [Record] args (content f)
-open Record
+open Record public
 
 -- The first thing we expect Records to deliver is the ability to
 -- project the content of a field given its name.
