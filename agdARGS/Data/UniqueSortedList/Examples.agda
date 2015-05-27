@@ -5,4 +5,4 @@ open import agdARGS.Data.UniqueSortedList                   strictTotalOrder
 open import agdARGS.Data.UniqueSortedList.SmartConstructors strictTotalOrder
 
 Characteristics : UniqueSortedList _ _
-Characteristics = "name" `∷ "age" `∷ `[]
+Characteristics = "name" `∷ "age" `∷ "idcard" `∷ `[]

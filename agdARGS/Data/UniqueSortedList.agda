@@ -67,3 +67,12 @@ module agdARGS.Data.UniqueSortedList
   ... | _     | yes (el , p , r) = yes (el , s p , r)
   ... | no ¬p | no ¬q            = no (λ { (el , p⊎q , r) → [ (λ p → ¬p (subst (λ x → R (f x) a) p r))
                                                             , (λ q → ¬q (el , q , r)) ]′ (∈∷-inj p⊎q)  })
+
+module withEqDec
+       (eqDec : Decidable ((StrictTotalOrder.Carrier STO → _ → Set ℓᵃ) ∋ _≡_))
+       where
+
+  _∈?_ : (a : _) {lb ub : Carrier} (as : UniqueSortedList lb ub) → Dec (a ∈ as)
+  a ∈? as with search eqDec id a as
+  ... | yes (.a , pr , refl) = yes pr
+  ... | no ¬pr               = no $ λ pr → ¬pr $ _ , pr , refl
