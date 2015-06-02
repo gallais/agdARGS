@@ -17,49 +17,19 @@ open SC.withEqDec String._≟_
 
 open import Function
 
--- We start with some boilerplate code: defining the Fields element
--- where all elements are sets
-
-[Sets] : (ℓ : Level) {lb ub : _} {args : UniqueSortedList lb ub} → [Fields] (Level.suc ℓ) args
-[Sets] ℓ = λ _ _ → Set ℓ
-
-Sets : (ℓ : Level) {lb ub : _} {args : UniqueSortedList lb ub} → Fields (Level.suc ℓ) args
-Sets ℓ = mkFields ([Sets] ℓ)
-
--- And creating a Fields element based on a record whose fields are
--- types: the corresponding record will have fields whose types are
--- stored in that original record. Think:
---
---|| record { isDog      = true
---||        ; animalName = "Doggy" }
---
--- has type
---
---|| record { isDog      = Bool
---||        ; animalName = String }
-
-[⟦_⟧] : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} (r : [Record] args $ [Sets] ℓ) → [Fields] ℓ args
-[⟦ r ⟧] = λ arg pr → [project] arg pr r
-
-⟦_⟧ : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} (r : Record args $ Sets ℓ) → Fields ℓ args
-⟦ r ⟧ = mkFields [⟦ fields r ⟧]
-
 -- We can apply this new method to Characteristics for instance
 
-CharacteristicsDomain : Fields Level.zero Characteristics
-CharacteristicsDomain = ⟦ mkRecord (fields f) ⟧
-  where
+Attributes : Fields Level.zero Characteristics
+Attributes = Type $ "age"    ∷= ℕ
+                  ⟨ "name"   ∷= String
+                  ⟨ "idcard" ∷= Bool
+                  ⟨ ⟨⟩
 
-    f : Record Characteristics _
-    f = "age"    ∷= ℕ
-      ⟨ "name"   ∷= String
-      ⟨ "idcard" ∷= Bool
-      ⟨ ⟨⟩
-
--- A Person is then modelled as a record of characteristics
+-- A Person is then modelled as a record of attributs for each one
+-- her characterics
 
 Person : Set
-Person = Record Characteristics CharacteristicsDomain
+Person = Record Characteristics Attributes
 
 -- We may either build the nested tuple directly but that
 -- requires understanding the internal representation:
@@ -70,29 +40,25 @@ Person = Record Characteristics CharacteristicsDomain
 john : Person
 john = mkRecord $ 17 , true , "john" , lift tt
 
--- Or we may use the smartconstructors requiring us to prove
+-- Or we may use the smart constructors requiring us to prove
 -- that the field indeed exists. Once more we have to know
 -- that "name", for instance, is at index s (s z)
 
 june : Person
-june = mkRecord $ fields r where
-  r : Record Characteristics _
-  r = "age"    at z       ∷= 20
-    ⟨ "name"   at s (s z) ∷= "june"
-    ⟨ "idcard" at s z     ∷= true
-    ⟨ ⟨⟩
+june = "age"    at z       ∷= 20
+     ⟨ "name"   at s (s z) ∷= "june"
+     ⟨ "idcard" at s z     ∷= true
+     ⟨ ⟨⟩
 
 -- Or, given that equality on Strings is decidable, we may
 -- rely on a decision procedure to generate this information
 -- and write the simpler:
 
 julie : Person
-julie = mkRecord $ fields r where
-  r : Record Characteristics _
-  r = "age"    ∷= 22     
-    ⟨ "name"   ∷= "julie"
-    ⟨ "idcard" ∷= false
-    ⟨ ⟨⟩
+julie = "age"    ∷= 22     
+      ⟨ "name"   ∷= "julie"
+      ⟨ "idcard" ∷= false
+      ⟨ ⟨⟩
 
 -- Once we have our Persons, we can write an (applicative) validator
 -- by specifying validators for each one of the fields. Here we
@@ -100,8 +66,11 @@ julie = mkRecord $ fields r where
 -- - be over 18
 -- - be carrying an id
 
-getsInThePub : Record Characteristics (CharacteristicsDomain ⟶ A[ Maybe , CharacteristicsDomain ])
-getsInThePub = mkRecord $ fields validator
+getsInThePub : Record Characteristics (Attributes ⟶ Maybe [ Attributes ])
+getsInThePub = "age"    ∷= checkAge    
+             ⟨ "name"   ∷= AM.pure
+             ⟨ "idcard" ∷= checkId
+             ⟨ ⟨⟩
   where
     module AM = RawMonad monad
 
@@ -110,12 +79,6 @@ getsInThePub = mkRecord $ fields validator
 
     checkId : Bool → Maybe Bool
     checkId b = if b then just b else nothing
-
-    validator : Record Characteristics _
-    validator = "age"    ∷= checkAge    
-              ⟨ "name"   ∷= AM.pure
-              ⟨ "idcard" ∷= checkId
-              ⟨ ⟨⟩
 
 -- the validator then runs the various tests
 
@@ -135,4 +98,3 @@ juneInThePub = pubValidator june
 
 julieInThePub : Maybe Person
 julieInThePub = pubValidator julie
-
