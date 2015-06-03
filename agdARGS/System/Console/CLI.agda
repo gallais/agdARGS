@@ -10,13 +10,9 @@ open import agdARGS.Data.Record.Usual
 open import agdARGS.System.Console.Options.Domain
 open import Function
 
-
 mutual
 
-  Modifiers : (ℓ : Level) {args : USL} → Fields (suc ℓ) args
-  Modifiers ℓ = tabulate $ λ {s} → const (Modifier ℓ s)
-
-  Command : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ "modifiers" `∷ "arguments" `∷ `[])
+  Command : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ "modifiers" `∷ `[ "arguments" ])
   Command ℓ = Type $ "description" ∷= Lift String
                    ⟨ "modifiers"   ∷= Σ[ names ∈ USL ] Record names (Modifiers ℓ)
                    ⟨ "arguments"   ∷= Σ[ d ∈ Domain ℓ ] Parser d
@@ -25,13 +21,15 @@ mutual
   Flag : (ℓ : Level) → Fields (suc ℓ) `[ "description" ]
   Flag ℓ = Type $ "description" ∷= Lift String
                 ⟨ ⟨⟩
-  Option : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ "arguments" `∷ `[])
+  Option : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ `[ "arguments" ])
   Option ℓ = Type $ "description" ∷= Lift String
                   ⟨ "arguments"   ∷= Σ[ d ∈ Domain ℓ ] Parser d
                   ⟨ ⟨⟩
 
   data Modifier (ℓ : Level) (name : String) : Set (suc ℓ) where
-    command : Record ("description" `∷ "modifiers" `∷ "arguments" `∷ `[]) (Command ℓ) → Modifier ℓ name
-    flag    : Record `[ "description" ] (Flag ℓ)    → Modifier ℓ name
-    option  : Record ("description" `∷ "arguments" `∷ `[]) (Option ℓ)  → Modifier ℓ name
+    command : Record _ (Command ℓ) → Modifier ℓ name
+    flag    : Record _ (Flag ℓ)    → Modifier ℓ name
+    option  : Record _ (Option ℓ)  → Modifier ℓ name
 
+  Modifiers : (ℓ : Level) {args : USL} → Fields (suc ℓ) args
+  Modifiers ℓ = tabulate $ λ {s} → const (Modifier ℓ s)
