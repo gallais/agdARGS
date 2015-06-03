@@ -1,2 +1,12 @@
 *.agdai
 *~
+*.aux
+*latexmk
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.sty
+__build/
