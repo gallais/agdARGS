@@ -15,7 +15,7 @@ open import Category.Applicative
 -- to represent this set by a UniqueSortedList in order to ensure
 -- unicity of field names. Hence the following import:
 
-open import agdARGS.Data.UniqueSortedList STO public
+open import agdARGS.Data.UniqueSortedList STO
 
 -- We then need to define what the content of each one of these
 -- fields is. This is taken care of by associating a set to each

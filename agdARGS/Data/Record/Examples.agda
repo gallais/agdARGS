@@ -3,17 +3,15 @@ module agdARGS.Data.Record.Examples where
 open import Level as Level
 open import Data.Unit
 open import Data.Bool
-open import Data.String as String
 open import Data.Nat as Nat
+open import Data.String
 open import Data.Product
 open import Data.Maybe
 open import Category.Monad
 open import lib.Nullary
 
 open import agdARGS.Data.UniqueSortedList.Examples
-open import agdARGS.Data.Record                   strictTotalOrder as Rec
-open import agdARGS.Data.Record.SmartConstructors strictTotalOrder as SC
-open SC.withEqDec String._≟_
+open import agdARGS.Data.Record.Usual
 
 open import Function
 

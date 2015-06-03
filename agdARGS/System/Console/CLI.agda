@@ -1,48 +1,37 @@
 module agdARGS.System.Console.CLI where
 
 open import Level
-open import Data.Unit
-open import Data.Maybe as Maybe
-open import Data.List
-open import Data.Sum as Sum
 open import Data.Product
 open import Data.String
-open import Category.Monad
-open import Function
 
-open import agdARGS.System.Console.Options public
-module Opts = Options zero
-open Opts public
+open import agdARGS.Data.UniqueSortedList.Usual as UU
+open import agdARGS.Data.Record.Usual
 
 open import agdARGS.System.Console.Options.Domain
-open import agdARGS.System.Console.Options.Instances zero public
-open import agdARGS.System.Console.Options.Usage     zero public
-
-record CLI : Set₁ where
-  field
-    default : Maybe (Option zero)
-    options : Options
-
-record CLMode (cli : CLI) : Set₁ where
-  field
-    default : Option zero → Set
-    options : Mode (CLI.options cli)
-
-MaybeCLMode : (cli : CLI) → CLMode cli
-MaybeCLMode cli =
-  record { default = Maybe ∘ SetDomain ∘ Option.domain
-         ; options = MaybeMode }
-
-record CLValue (cli : CLI) (clm : CLMode cli) : Set₁ where
-  field
-    default : maybe (CLMode.default clm) (Lift ⊤) (CLI.default cli)
-    options : Values (CLI.options cli) (CLMode.options clm)
+open import Function
 
 
-parseArgs : (cli : CLI) → List String → String ⊎ CLValue cli (MaybeCLMode cli)
-parseArgs cli strs =
-  let res = parse strs (CLI.default cli) (CLI.options cli)
-  in Sum.map id (uncurry $ λ def vals → record { default = def ; options = vals }) res
+mutual
 
-get : {cli : CLI} (str : String) (opts : CLValue cli (MaybeCLMode cli)) → _
-get str = genericGet str ∘ CLValue.options
+  Modifiers : (ℓ : Level) {args : USL} → Fields (suc ℓ) args
+  Modifiers ℓ = tabulate $ λ {s} → const (Modifier ℓ s)
+
+  Command : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ "modifiers" `∷ "arguments" `∷ `[])
+  Command ℓ = Type $ "description" ∷= Lift String
+                   ⟨ "modifiers"   ∷= Σ[ names ∈ USL ] Record names (Modifiers ℓ)
+                   ⟨ "arguments"   ∷= Σ[ d ∈ Domain ℓ ] Parser d
+                   ⟨ ⟨⟩
+
+  Flag : (ℓ : Level) → Fields (suc ℓ) `[ "description" ]
+  Flag ℓ = Type $ "description" ∷= Lift String
+                ⟨ ⟨⟩
+  Option : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ "arguments" `∷ `[])
+  Option ℓ = Type $ "description" ∷= Lift String
+                  ⟨ "arguments"   ∷= Σ[ d ∈ Domain ℓ ] Parser d
+                  ⟨ ⟨⟩
+
+  data Modifier (ℓ : Level) (name : String) : Set (suc ℓ) where
+    command : Record ("description" `∷ "modifiers" `∷ "arguments" `∷ `[]) (Command ℓ) → Modifier ℓ name
+    flag    : Record `[ "description" ] (Flag ℓ)    → Modifier ℓ name
+    option  : Record ("description" `∷ "arguments" `∷ `[]) (Option ℓ)  → Modifier ℓ name
+

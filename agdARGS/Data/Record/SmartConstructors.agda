@@ -10,7 +10,8 @@ open import Data.Unit
 open import Data.Product
 open import Function
 open import lib.Nullary
-open import agdARGS.Data.Record STO as Rec hiding (module withEqDec)
+open import agdARGS.Data.UniqueSortedList STO as USL hiding (module withEqDec)
+open import agdARGS.Data.Record STO as Rec
 
 Dummy : (ℓ : Level) {lb ub : _} {args : UniqueSortedList lb ub} → Fields ℓ args
 Dummy ℓ = tabulate $ const $ Lift ⊤
@@ -49,7 +50,7 @@ module withEqDec
        (eqDec : Decidable ((StrictTotalOrder.Carrier STO → _ → Set ℓᵃ) ∋ _≡_))
        where
 
-  open Rec.withEqDec eqDec
+  open USL.withEqDec eqDec
   open import Relation.Nullary
 
   infixr 5 _∷=_⟨_

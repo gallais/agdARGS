@@ -10,9 +10,16 @@ module agdARGS.Data.UniqueSortedList.SmartConstructors
   open import agdARGS.Data.Infinities
   open import agdARGS.Data.UniqueSortedList STO
 
-  `[] : UniqueSortedList -∞ +∞
+  USL : Set (ℓʳ ⊔ ℓᵃ)
+  USL = UniqueSortedList -∞ +∞
+
+  `[] : USL
   `[] = -∞<+∞ ■
 
   infixr 5 _`∷_
-  _`∷_ : ∀ x (xs : UniqueSortedList -∞ +∞) {pr : _} → UniqueSortedList -∞ +∞
+  _`∷_ : ∀ x (xs : USL) {pr : _} → USL
   (x `∷ xs) {pr} = fromJust (insert x (-∞<↑ x) ↑ x <+∞ xs) {pr}
+
+  infix 6 `[_]
+  `[_] : ∀ x → USL
+  `[ x ] = x `∷ `[]
