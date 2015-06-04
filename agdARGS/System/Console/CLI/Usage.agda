@@ -18,6 +18,9 @@ Printer = ℕ → List String -- indentation level
 indent : ℕ → String → String
 indent i str = replicate i ' ' String.++ str
 
+pad
+
+
 mutual
 
   {-# TERMINATING #-}

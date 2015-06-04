@@ -15,15 +15,17 @@ open import Function
 
 mutual
 
-  Command : (ℓ : Level) → Fields (suc ℓ) ("description" `∷ "subcommands" `∷ "modifiers" `∷ `[ "arguments" ])
-  Command ℓ = Type $ "description" ∷= Lift String
-                   ⟨ "subcommands" ∷= Σ[ names ∈ USL ] Commands ℓ names
-                   ⟨ "modifiers"   ∷= Σ[ names ∈ USL ] Record names (Modifiers ℓ)
-                   ⟨ "arguments"   ∷= Σ[ d ∈ Domain ℓ ] Parser d
-                   ⟨ ⟨⟩
+  record Command (ℓ : Level) : Set (suc ℓ) where
+    inductive
+    constructor mkCommand
+    field
+      description : String
+      subcommands : Σ[ names ∈ USL ] Commands ℓ names
+      modifiers   : Σ[ names ∈ USL ] Record names (Modifiers ℓ)
+      arguments   : Σ[ d ∈ Domain ℓ ] Parser d
 
   data Commands (ℓ : Level) (names : USL) : Set (suc ℓ) where
-    commands : Record names (tabulate (const (Record _ (Command ℓ)))) → Commands ℓ names
+    commands : Record names (tabulate (const (Command ℓ))) → Commands ℓ names
 
   Flag : (ℓ : Level) → Fields (suc ℓ) `[ "description" ]
   Flag ℓ = Type $ "description" ∷= Lift String
@@ -44,8 +46,9 @@ mutual
 record CLI (ℓ : Level) : Set (suc ℓ) where
   field
     name : String
-    exec : Record _ (Command ℓ)
+    exec : Command ℓ
 open CLI public
+open Command public
 
 open import Data.List
 open import agdARGS.Data.Infinities
@@ -54,29 +57,21 @@ open import Relation.Binary.PropositionalEquality
 
 mutual
 
-  data ParsedCommand {ℓ : Level} : (c : Record _ (Command ℓ)) → Set (suc ℓ) where
-    theCommand : {descr : Lift String}
+  data ParsedCommand {ℓ : Level} : (c : Command ℓ) → Set (suc ℓ) where
+    theCommand : {descr : String}
                  {subs : Σ[ names ∈ USL ] Commands ℓ names}
                  {modNames : USL} {mods : Record modNames (Modifiers ℓ)}
                  (parsedMods : ParsedModifiers mods)
                  {args : Σ[ d ∈ Domain ℓ ] Parser d}
                  (parsedArgs : ParsedArguments args)
-                 → ParsedCommand $ "description" ∷= descr
-                                 ⟨ "subcommands" ∷= subs
-                                 ⟨ "modifiers"   ∷= modNames , mods
-                                 ⟨ "arguments"   ∷= args
-                                 ⟨ ⟨⟩
+                 → ParsedCommand (mkCommand descr subs (modNames , mods) args)
 
-    subCommand : {descr : Lift String}
+    subCommand : {descr : String}
                  {sub : String} {subs : USL} (pr : sub ∈ subs) {cs : Record subs _}
                  {mods : Σ[ names ∈ USL ] Record names (Modifiers ℓ)} →
                  (parsedSub : ParsedCommand (project′ pr cs))
                  {args : Σ[ d ∈ Domain ℓ ] Parser d}
-                 → ParsedCommand $ "description" ∷= descr
-                                 ⟨ "subcommands" ∷= subs , commands cs
-                                 ⟨ "modifiers"   ∷= mods
-                                 ⟨ "arguments"   ∷= args
-                                 ⟨ ⟨⟩
+                 → ParsedCommand (mkCommand descr (subs , commands cs) mods args)
 
 
   data ParsedModifiers {ℓ : Level} {modNames : USL} (mods : Record modNames (Modifiers ℓ)) : Set ℓ where
@@ -91,7 +86,6 @@ mutual
 
   ParsedArguments : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → Set ℓ
   ParsedArguments (d , p) = Maybe $ maybe id (Lift ⊥) (Carrier d)
-
 
 
 open import Data.Sum
@@ -128,12 +122,36 @@ dummy : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : Fields �
         Record args (Maybe RU.[ fs ])
 dummy = mkRecord $ [dummy] _
 
+open import lib.Nullary
+open import agdARGS.Data.UniqueSortedList.Usual
+
 mutual
 
-  parseCommand : {ℓ : Level} (c : Record _ (Command ℓ)) → List String → String ⊎ ParsedCommand c
+  parseSubCommand : {ℓ : Level} (c : Command ℓ) {x : String} (xs : List String)
+                    (pr : x ∈ proj₁ (subcommands c)) → String ⊎ ParsedCommand c
+  parseSubCommand (mkCommand _ (subs , commands cs) _ _) xs pr =
+    case parseCommand (project′ pr cs) xs of λ
+           { (inj₁ err) → inj₁ err
+           ; (inj₂ sub) → inj₂ (subCommand pr sub) }
+
+  parseModifier : {ℓ : Level} (c : Command ℓ) {x : String} (recyxs recxs : String ⊎ ParsedCommand c)
+                  (pr : x ∈ proj₁ (modifiers c)) → String ⊎ ParsedCommand c
+  parseModifier c recyxs recxs pr =
+        case project′ pr (proj₂ $ modifiers c) of λ
+          { (flag f)   → case recyxs of λ { (inj₁ err) → inj₁ err ; (inj₂ c) → {!!} }
+          ; (option o) → {!!} }
+
+  parseCommand : {ℓ : Level} (c : Command ℓ) → List String → String ⊎ ParsedCommand c
   parseCommand c []          = inj₁ "Not enough arguments"
   parseCommand c ("--" ∷ xs) =
-    case parseArguments (`project "arguments" c) xs nothing of λ
+    case parseArguments (arguments c) xs nothing of λ
       { (inj₁ err)  → inj₁ err
       ; (inj₂ args) → inj₂ $ theCommand (theModifiers dummy) args }
-  parseCommand c (x ∷ xs)    = inj₁ "todo: implement"
+  parseCommand c (x ∷ [])     = inj₁ "todo: implement"
+  parseCommand c (x ∷ y ∷ xs) =
+    dec (x ∈? proj₁ (subcommands c)) (parseSubCommand c (y ∷ xs)) $ λ _ →
+      let recyxs = parseCommand c (y ∷ xs)
+          recxs  = parseCommand c xs
+      in
+    dec (x ∈? proj₁ (modifiers c)) (parseModifier c recyxs recxs) $ λ _ →
+    case parseArgument (arguments c) x of {!!}
