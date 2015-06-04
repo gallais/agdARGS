@@ -60,3 +60,10 @@ module withEqDec
   _∷=_⟨_ {args = args} arg v r {pr} with arg ∈? args
   _∷=_⟨_ {args = args} arg v r      | yes pr = arg at pr ∷= v ⟨ r
   _∷=_⟨_ {args = args} arg v r {()} | no ¬pr
+
+  `project : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {f : Fields ℓ args}
+             (arg : _) (r : Record args f) → dec (arg ∈? args) (λ pr → lookup pr f) (const $ Lift ⊤)
+  `project {args = args} arg r with arg ∈? args
+  ... | yes pr = project pr r
+  ... | no ¬pr = lift tt
+            

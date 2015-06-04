@@ -7,7 +7,7 @@ module agdARGS.Data.Record
        where
 
 open import Data.Unit
-open import Data.Product
+open import Data.Product hiding (map)
 open import Function
 open import Category.Applicative
 
@@ -100,6 +100,17 @@ project : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : Fields
           {arg : _} (pr : arg ∈ args) → Record args fs → lookup pr fs
 project pr = [project] pr ∘ content
 
+[project′] : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
+             {fs : {arg : _} (pr : arg ∈ args) → Set ℓ}
+             {arg : _} (pr : arg ∈ args) → [Record] args ([tabulate] args fs) → fs pr
+[project′] z      (v , _) = v
+[project′] (s pr) (_ , r) = [project′] pr r
+
+project′ : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
+           {fs : {arg : _} (pr : arg ∈ args) → Set ℓ}
+           {arg : _} (pr : arg ∈ args) → Record args (tabulate fs) → fs pr
+project′ pr = [project′] pr ∘ content
+
 -- A record of Sets can naturally be turned into the appropriate Fields
 -- This is how we end up typing records with records
 
@@ -123,6 +134,15 @@ Type = mkFields ∘ [Type] _ ∘ content
 pure : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : Fields ℓ args}
        (v : (arg : _) (pr : arg ∈ args) → lookup pr fs) → Record args fs
 pure = mkRecord ∘ [pure]
+
+[pure′] : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : {arg : _} (pr : arg ∈ args) → Set ℓ}
+         (v : (arg : _) (pr : arg ∈ args) → fs pr) → [Record] args ([tabulate] args fs)
+[pure′] {args = lt ■}           v = lift tt
+[pure′] {args = hd , lt ∷ args} v = v _ z , [pure′] (λ a → v a ∘ s)
+
+pure′ : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : {arg : _} (pr : arg ∈ args) → Set ℓ}
+        (v : (arg : _) (pr : arg ∈ args) → fs pr) → Record args (tabulate fs)
+pure′ = mkRecord ∘ [pure′]
 
 -- A special sort of content may be a Fields-morphism: for each
 -- field we will explaing how to turn data belonging to the first
@@ -152,6 +172,20 @@ app : {ℓᶠ ℓᵍ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
       (fs→gs : Record args (fs ⟶ gs)) (f : Record args fs) → Record args gs
 app fs→gs f = mkRecord $ [app] (content fs→gs) (content f)
 
+[map] : {ℓᶠ ℓᵍ : Level} {lb ub : _} (args : UniqueSortedList lb ub)
+        {fs : {arg : _} (pr : arg ∈ args) → Set ℓᶠ}
+        {gs : {arg : _} (pr : arg ∈ args) → Set ℓᵍ}
+        (fs→gs : {arg : _} (pr : arg ∈ args) → fs pr → gs pr)
+        (f : [Record] args ([tabulate] args fs)) → [Record] args ([tabulate] args gs)
+[map] (_ ■)          fs→gs f       = lift tt
+[map] (_ , _ ∷ args) fs→gs (v , f) = fs→gs z v , [map] args (fs→gs ∘ s) f
+
+map : {ℓᶠ ℓᵍ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
+      {fs : {arg : _} (pr : arg ∈ args) → Set ℓᶠ}
+      {gs : {arg : _} (pr : arg ∈ args) → Set ℓᵍ}
+      (fs→gs : {arg : _} (pr : arg ∈ args) → fs pr → gs pr)
+      (f : Record args (tabulate fs)) → Record args (tabulate gs)
+map fs→gs = mkRecord ∘ [map] _ fs→gs ∘ content
 
 [seqA] : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : [Fields] ℓ args}
          {a : Set ℓ → Set ℓ} (A : RawApplicative a) →

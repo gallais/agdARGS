@@ -14,33 +14,38 @@ open import agdARGS.Algebra.Magma
 
 open import Function
 
-git : Record _ (Command zero)
-git = "description" ∷= lift "A distributed revision control system with an emphasis on speed,\
-                            \ data integrity, and support for distributed, non-linear workflows"
-    ⟨ "modifiers"   ∷= "add" `∷ "clone" `∷ `[ "push" ] , git-modifiers
-    ⟨ "arguments"   ∷= ALot (List.rawMagma String) , inj₁
-    ⟨ ⟨⟩ where
+git-exec : Record _ (Command zero)
+git-exec = "description" ∷= lift "A distributed revision control system with an emphasis on speed,\
+                                 \ data integrity, and support for distributed, non-linear workflows"
+         ⟨ "subcommands" ∷= "add" `∷ "clone" `∷ `[ "push" ] , git-modifiers
+         ⟨ "modifiers"   ∷= `[] , ⟨⟩
+         ⟨ "arguments"   ∷= ALot (List.rawMagma String) , inj₁
+         ⟨ ⟨⟩ where
 
-  git-modifiers : Record _ (Modifiers zero)
-  git-modifiers = "add"   ∷= command git-add
-                ⟨ "clone" ∷= command git-clone
-                ⟨ "push"  ∷= command git-push
-                ⟨ ⟨⟩ where
+  git-modifiers : Commands zero _
+  git-modifiers =
+    commands $ "add"   ∷= git-add
+             ⟨ "clone" ∷= git-clone
+             ⟨ "push"  ∷= git-push
+             ⟨ ⟨⟩ where
 
     git-add : Record _ (Command zero)
     git-add = "description" ∷= lift "Add file contents to the index"
+            ⟨ "subcommands" ∷= `[] , commands ⟨⟩
             ⟨ "modifiers"   ∷= `[] , ⟨⟩
             ⟨ "arguments"   ∷= ALot (List.rawMagma String) , inj₁
             ⟨ ⟨⟩
 
     git-clone : Record _ (Command zero)
     git-clone = "description" ∷= lift "Clone a repository into a new directory"
+              ⟨ "subcommands" ∷= `[] , commands ⟨⟩
               ⟨ "modifiers"   ∷= `[] , ⟨⟩
               ⟨ "arguments"   ∷= Some String , inj₁
               ⟨ ⟨⟩
 
     git-push : Record _ (Command zero)
     git-push = "description" ∷= lift "Update remote refs along with associated objects"
+             ⟨ "subcommands" ∷= `[] , commands ⟨⟩
              ⟨ "modifiers"   ∷= `[ "--force" ] , "--force" ∷= flag force ⟨ ⟨⟩
              ⟨ "arguments"   ∷= None , lift tt
              ⟨ ⟨⟩ where
@@ -51,3 +56,12 @@ git = "description" ∷= lift "A distributed revision control system with an emp
                                \ flag disables the check. This can cause the remote repository\
                                \ to lose commits; use it with care."
             ⟨ ⟨⟩
+
+git : CLI zero
+git = record { name = "git" ; exec = git-exec }
+
+open import agdARGS.System.Console.CLI.Usage
+
+test : String
+test = usage git
+
