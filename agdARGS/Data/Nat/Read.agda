@@ -61,6 +61,8 @@ parseℕ str = maybe′ inj₂ failure $ goBase $ toList str
     goBase xs               = go 10 xs
 
 
-test : _
-test = parseℕ "0bFF1"
+private
+
+  test : _
+  test = parseℕ "0bFF1"
 
