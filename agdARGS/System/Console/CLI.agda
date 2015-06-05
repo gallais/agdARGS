@@ -193,10 +193,13 @@ mutual
   parseCommand : {ℓ : Level} (c : Command ℓ) → List String → String ⊎ ParsedCommand c
   parseCommand c []          = inj₁ "Not enough arguments"
   parseCommand c ("--" ∷ xs) = mapError (theCommand (theModifiers dummy)) $ parseArguments (arguments c) xs nothing
-  parseCommand c (x ∷ [])     = inj₁ "todo: implement"
+  parseCommand c (x ∷ [])     =
+    let dummyPD = inj₂ (theCommand (theModifiers dummy) nothing) in
+    dec (x ∈? proj₁ (subcommands c)) (parseSubCommand c []) $ λ _ →
+    dec (x ∈? proj₁ (modifiers c)) (parseModifier c dummyPD dummyPD) (const $ parseArgument c dummyPD x)
   parseCommand c (x ∷ y ∷ xs) =
     dec (x ∈? proj₁ (subcommands c)) (parseSubCommand c (y ∷ xs)) $ λ _ →
       let recyxs = parseCommand c (y ∷ xs)
           recxs  = parseCommand c xs
       in
-    dec (x ∈? proj₁ (modifiers c)) (parseModifier c recyxs recxs) (const $ parseArgument c recxs x)
+    dec (x ∈? proj₁ (modifiers c)) (parseModifier c recyxs recxs) (const $ parseArgument c recyxs x)
