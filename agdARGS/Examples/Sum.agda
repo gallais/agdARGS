@@ -1,11 +1,14 @@
 module agdARGS.Examples.Sum where
 
+open import Data.Nat     as Nat
+open import Data.Integer as Int
+
 open import Level as Level
+open import Data.Empty
 open import Data.Product
 open import Data.Bool
 open import Data.Maybe
 open import Data.Sum as Sum
-open import Data.Nat
 open import Data.String as String
 open import agdARGS.Data.String as Str
 open import Data.List as List
@@ -18,26 +21,45 @@ open import agdARGS.System.Console.CLI
 
 open import agdARGS.Algebra.Magma
 open import agdARGS.Data.Nat.Read
+open import agdARGS.Data.Integer.Read
+open import agdARGS.Data.UniqueSortedList.Usual
+open import agdARGS.Data.Record.Usual
+open import agdARGS.System.Console.Options.Domain
 
-nats : Option Level.zero
-nats = record (lotsOf parseℕ) { name = "Nats" ; description = "Natural numbers to sum" }
+sum-nat : Command Level.zero
+sum-nat = record { description = ""
+                 ; subcommands = `[] , commands ⟨⟩
+                 ; modifiers   = `[] , ⟨⟩
+                 ; arguments   = ALot (List.rawMagma ℕ) , mapError [_] ∘ parseℕ
+                 }
 
-version : Option Level.zero
-version = record flag { name = "Version" ; flag = "-V" ; description = "Print the version number" }
+sum-int : Command Level.zero
+sum-int = record { description = ""
+                 ; subcommands = `[] , commands ⟨⟩
+                 ; modifiers   = `[] , ⟨⟩
+                 ; arguments   = ALot (List.rawMagma ℤ) , mapError [_] ∘ parseℤ
+                 }
 
-help : Option Level.zero
-help = record flag { name = "Help" ; flag = "--help" ; description = "Print this help" }
+sum-cli : CLI Level.zero
+sum-cli = record { name = "sum"
+                 ; exec = sum-exec } where
 
-input : Option Level.zero
-input = record (option inj₂) { name = "Input" ; flag = "-i" ; description = "Read nats from a file" }
+  sum-exec : Command Level.zero
+  sum-exec = record { description = ""
+                    ; subcommands = "nat" `∷ `[ "int" ] , sum-exec-subs
+                    ; modifiers   = `[] , ⟨⟩
+                    ; arguments   = Some (Lift ⊥) , λ _ → inj₁ "Argument provided when none expected"
+                    } where
 
-output : Option Level.zero
-output = record (option inj₂) { name = "Output" ; flag = "-o" ; description = "Output sum to a file" }
+    sum-exec-subs : Commands Level.zero _
+    sum-exec-subs = commands $ "nat" ∷= sum-nat
+                             ⟨ "int" ∷= sum-int
+                             ⟨ ⟨⟩
 
-config : CLI
-config = record { default = just nats
-                ; options = version `∷ input `∷ help `∷ output `∷ `[] }
-open CLValue
+private
+
+  test : _
+  test = parseCommand (exec sum-cli) ("nat" ∷ "2" ∷ "4" ∷ "524" ∷ [])
 
 open import IO
 open import Coinduction
@@ -47,13 +69,28 @@ open import agdARGS.System.Environment.Arguments
 main : _
 main = run $
   ♯ getArgs >>= λ args →
-  ♯ [ error , success ]′ (parseArgs config args)
+  ♯ [ error , success ]′ (parseCommand (exec sum-cli) args)
 
   where
 
     error : String → _
     error = putStrLn ∘ String._++_ "*** Error: "
 
+    success-nat : ParsedCommand sum-nat → IO _
+    success-nat (theCommand _ vs) = putStrLn $ NatShow.show $ maybe (foldr Nat._+_ 0) 0 vs
+    success-nat (subCommand () _)
+
+    success-int : ParsedCommand sum-int → IO _
+    success-int (theCommand _ vs) = putStrLn $ Int.show $ maybe (foldr Int._+_ (+ 0)) (+ 0) vs
+    success-int (subCommand () _)
+
+    success : ParsedCommand (exec sum-cli) → IO _
+    success (theCommand _ _)                     = putStrLn "meh"
+    success (subCommand {sub = ."nat"} (s z) pc) = success-nat pc
+    success (subCommand {sub = ."int"} z     pc) = success-int pc
+    success (subCommand (s (s ())) _)
+
+{-
     getNats : CLValue config (MaybeCLMode config) → IO (String ⊎ List ℕ)
     getNats clv = maybe′ readNatsFromFile (return $ validateNats $ default clv) $ get "-i" clv
       where
@@ -73,3 +110,4 @@ main = run $
            if is-just $ get "--help" clv then putStrLn $ usage (CLI.options config)
       else if is-just $ get "-V"     clv then putStrLn "Sum: version 0.9"
       else ♯ getNats clv >>= λ ns → ♯ [ error , putNats clv ∘ foldl _+_ 0 ]′ ns
+-}
