@@ -56,6 +56,7 @@ open import agdARGS.Data.Infinities
 open import agdARGS.Data.Record.Properties strictTotalOrder
 open import Relation.Binary.PropositionalEquality
 
+
 mutual
 
   data ParsedCommand {ℓ : Level} : (c : Command ℓ) → Set (suc ℓ) where
@@ -88,6 +89,12 @@ mutual
   ParsedArguments : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → Set ℓ
   ParsedArguments (d , p) = Maybe $ Carrier d
 
+infix  1 [_
+infixr 2 _[_]∙_
+infix  3 _∷=_&_]
+pattern [_ p = p
+pattern _∷=_&_] descr mods args = theCommand {descr} mods args
+pattern _[_]∙_ desc pr sub     = subCommand {sub = desc} pr sub
 
 open import Data.Sum
 open import agdARGS.Data.Sum as aDS
@@ -141,7 +148,7 @@ parseArguments p str dft = foldl (cons p) (inj₂ dft) str
     cons p (inj₁ str)      _   = inj₁ str
     cons p (inj₂ nothing)  str = just <$> proj₂ p str
     cons p (inj₂ (just v)) str with proj₁ p | proj₂ p
-    ... | Some _ | _      = inj₁ "Too many arguments: only one expect"
+    ... | Some _ | _      = inj₁ "Too many arguments: only one expected"
     ... | ALot m | parser = parser str >>= λ w → return (just (v ∙ w))
       where open RawMagma m
 
