@@ -14,7 +14,9 @@ arguments parsing and usage):
   is a `wc`-like utility,
 
 * and [Sum](https://github.com/gallais/agdARGS/blob/master/agdARGS/Examples/Sum.agda)
-  sums the list of nats it is given.
+  is a simple example of a hierarchical cli: it has two sub-commands ("nat" and "int"
+  respectively) which sum the list of numbers (nats and ints respectively) they are
+  given.
 
 ## Dependencies
 
