@@ -5,8 +5,9 @@ open import Data.List
 open import Data.String
 
 {-# IMPORT System.Environment #-}
+{-# IMPORT Data.Text          #-}
 
 postulate
   getArgs : IO (List String)
 
-{-# COMPILED getArgs System.Environment.getArgs #-}
+{-# COMPILED getArgs (fmap Data.Text.pack <$> System.Environment.getArgs) #-}

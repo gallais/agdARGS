@@ -8,7 +8,7 @@ open import Data.Maybe as Maybe
 open import Data.List
 open import Category.Monad
 open import Function
-open import lib.Nullary
+open import agdARGS.Relation.Nullary
 open import Relation.Nullary.Decidable using (True)
 
 parseBase :

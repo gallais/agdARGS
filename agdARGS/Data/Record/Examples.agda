@@ -8,7 +8,7 @@ open import Data.String
 open import Data.Product
 open import Data.Maybe
 open import Category.Monad
-open import lib.Nullary
+open import agdARGS.Relation.Nullary
 
 open import agdARGS.Data.UniqueSortedList.Examples
 open import agdARGS.Data.Record.Usual
@@ -23,7 +23,7 @@ Attributes = Type $ "age"    ∷= ℕ
                   ⟨ "idcard" ∷= Bool
                   ⟨ ⟨⟩
 
--- A Person is then modelled as a record of attributs for each one
+-- A Person is then modelled as a record of attributes for each one
 -- her characterics
 
 Person : Set

@@ -14,30 +14,34 @@ open import agdARGS.Data.String as Str
 open import Data.List as List
 import agdARGS.Data.List as List
 open import Function
-open import lib.Nullary
+open import agdARGS.Relation.Nullary
 
 
 open import agdARGS.System.Console.CLI
+open import agdARGS.System.Console.CLI.Parser
 
+open import agdARGS.Data.Error
 open import agdARGS.Algebra.Magma
 open import agdARGS.Data.Nat.Read
 open import agdARGS.Data.Integer.Read
 open import agdARGS.Data.UniqueSortedList.Usual
 open import agdARGS.Data.Record.Usual
+
 open import agdARGS.System.Console.Options.Domain
+open import agdARGS.System.Console.Options.Usual
 
 sum-nat : Command Level.zero
 sum-nat = record { description = "exec"
                  ; subcommands = `[] , commands ⟨⟩
                  ; modifiers   = `[] , ⟨⟩
-                 ; arguments   = ALot (List.rawMagma ℕ) , mapError [_] ∘ parseℕ
+                 ; arguments   = lotsOf parseℕ
                  }
 
 sum-int : Command Level.zero
 sum-int = record { description = "exec"
                  ; subcommands = `[] , commands ⟨⟩
                  ; modifiers   = `[] , ⟨⟩
-                 ; arguments   = ALot (List.rawMagma ℤ) , mapError [_] ∘ parseℤ
+                 ; arguments   = lotsOf parseℤ
                  }
 
 
@@ -49,7 +53,7 @@ sum-cli = record { name = "sum"
   sum-exec = record { description = "sum"
                     ; subcommands = "nat" `∷ `[ "int" ] , sum-exec-subs
                     ; modifiers   = `[] , ⟨⟩
-                    ; arguments   = Some (Lift ⊥) , λ _ → inj₁ "Argument provided when none expected"
+                    ; arguments   = none
                     } where
 
     sum-exec-subs : Commands Level.zero _
@@ -64,7 +68,7 @@ open import agdARGS.System.Environment.Arguments
 
 main : _
 main = run $
-  ♯ getArgs >>= λ args →
+  ♯ getArgs IO.>>= λ args →
   ♯ [ error , success ]′ (parseCommand (exec sum-cli) args)
 
   where

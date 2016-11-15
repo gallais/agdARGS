@@ -4,7 +4,7 @@ open import Level
 open import Function
 open import Data.Product
 open import Data.Sum
-open import lib.Nullary
+open import agdARGS.Relation.Nullary
 open import Relation.Nullary
 open import Relation.Binary
 
@@ -142,7 +142,7 @@ IsStrictTotalOrderT _≈_ _<_ ISTO =
   record { isEquivalence         = IsEquivalenceT _≈_ $ IsStrictTotalOrder.isEquivalence ISTO
          ; trans                 = trans
          ; compare               = compare
-         ; <-resp-≈              = <-resp-≈ }
+         }
   where
 
     trans : Transitive ([<] _<_)
@@ -172,21 +172,6 @@ IsStrictTotalOrderT _≈_ _<_ ISTO =
     compare +∞    -∞    = tri> (λ ()) (λ ()) -∞<+∞
     compare +∞    (↑ a) = tri> (λ ()) (λ ()) ↑ a <+∞
     compare +∞    +∞    = tri≈ (λ ()) +∞≈+∞ (λ ())
-
-    <-resp-≈₁ : {x : [ _ ]} → [<] _<_ x Respects [≈] _≈_
-    <-resp-≈₁ -∞≈-∞  lt       = lt
-    <-resp-≈₁ (↑ eq) (-∞<↑ a) = -∞<↑ _
-    <-resp-≈₁ (↑ eq) (↑ lt)   = ↑ proj₁ (IsStrictTotalOrder.<-resp-≈ ISTO) eq lt
-    <-resp-≈₁ +∞≈+∞  lt       = lt
-
-    <-resp-≈₂ : {y : [ _ ]} → flip ([<] _<_) y Respects [≈] _≈_
-    <-resp-≈₂ -∞≈-∞  lt      = lt
-    <-resp-≈₂ (↑ eq) ↑ a <+∞ = ↑ _ <+∞
-    <-resp-≈₂ (↑ eq) (↑ lt)  = ↑ proj₂ (IsStrictTotalOrder.<-resp-≈ ISTO) eq lt
-    <-resp-≈₂ +∞≈+∞  lt      = lt
-
-    <-resp-≈ : [<] _<_ Respects₂ [≈] _≈_
-    <-resp-≈ = <-resp-≈₁ , <-resp-≈₂
 
 PosetT : {ℓᵃ ℓᵉ ℓʳ : Level} → Poset ℓᵃ ℓᵉ ℓʳ → Poset ℓᵃ ℓᵉ ℓʳ
 PosetT PO =

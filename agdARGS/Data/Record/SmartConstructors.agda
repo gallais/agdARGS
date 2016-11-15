@@ -7,9 +7,10 @@ module agdARGS.Data.Record.SmartConstructors
        where
 
 open import Data.Unit
+open import Data.Empty
 open import Data.Product
 open import Function
-open import lib.Nullary
+open import agdARGS.Relation.Nullary
 open import agdARGS.Data.UniqueSortedList STO as USL hiding (module withEqDec)
 open import agdARGS.Data.Record STO as Rec
 
@@ -55,15 +56,21 @@ module withEqDec
 
   infixr 5 _∷=_⟨_
   _∷=_⟨_ : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {f : Fields ℓ args}
-           (arg : _) {A : Set ℓ} (v : A) (r : Record args f) {pr : isYes (arg ∈? args)} →
+           (arg : _) {A : Set ℓ} (v : A) (r : Record args f) {pr : toSet (arg ∈? args)} →
            Record args (update f (fromYes (arg ∈? args) {pr}) A)
   _∷=_⟨_ {args = args} arg v r {pr} with arg ∈? args
-  _∷=_⟨_ {args = args} arg v r      | yes pr = arg at pr ∷= v ⟨ r
-  _∷=_⟨_ {args = args} arg v r {()} | no ¬pr
+  ... | yes p = arg at p ∷= v ⟨ r
+  ... | no ¬p = ⊥-elim pr
 
   `project : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {f : Fields ℓ args}
              (arg : _) (r : Record args f) → dec (arg ∈? args) (λ pr → lookup pr f) (const $ Lift ⊤)
   `project {args = args} arg r with arg ∈? args
   ... | yes pr = project pr r
   ... | no ¬pr = lift tt
-            
+
+  _‼_ : ∀ {ℓ} {lb ub} {args : UniqueSortedList lb ub} {f : Fields ℓ args} →
+        Record args f → ∀ arg → {pr : toSet (arg ∈? args)} →
+        lookup (fromYes (arg ∈? args) {pr}) f
+  _‼_ {args = args} r arg {pr} with arg ∈? args
+  ... | yes p = project p r
+  ... | no ¬p = ⊥-elim pr
