@@ -28,38 +28,23 @@ open import agdARGS.Data.UniqueSortedList.Usual
 open import agdARGS.Data.Record.Usual
 
 open import agdARGS.System.Console.Options.Domain
+open import agdARGS.System.Console.Modifiers as Mods using (mkFlag)
 open import agdARGS.System.Console.Options.Usual
-
-sum-nat : Command Level.zero
-sum-nat = record { description = "exec"
-                 ; subcommands = `[] , commands ⟨⟩
-                 ; modifiers   = `[] , ⟨⟩
-                 ; arguments   = lotsOf parseℕ
-                 }
-
-sum-int : Command Level.zero
-sum-int = record { description = "exec"
-                 ; subcommands = `[] , commands ⟨⟩
-                 ; modifiers   = `[] , ⟨⟩
-                 ; arguments   = lotsOf parseℤ
-                 }
-
 
 sum-cli : CLI Level.zero
 sum-cli = record { name = "sum"
                  ; exec = sum-exec } where
 
-  sum-exec : Command Level.zero
   sum-exec = record { description = "sum"
-                    ; subcommands = "nat" `∷ `[ "int" ] , sum-exec-subs
-                    ; modifiers   = `[] , ⟨⟩
+                    ; subcommands = , commands sum-exec-subs
+                    ; modifiers   = , sum-exec-mods
                     ; arguments   = none
                     } where
 
-    sum-exec-subs : Commands Level.zero _
-    sum-exec-subs = commands $ "nat" ∷= sum-nat
-                             ⟨ "int" ∷= sum-int
-                             ⟨ ⟨⟩
+    sum-exec-mods = "--version" Mods.∷= mkFlag "Output version information and exit" ⟨ ⟨⟩
+    sum-exec-subs = "nat" ∷= basic "exec" (lotsOf parseℕ)
+                  ⟨ "int" ∷= basic "exec" (lotsOf parseℤ)
+                  ⟨ ⟨⟩
 
 open import IO
 open import Coinduction
@@ -91,25 +76,3 @@ main = run $
     success ([ ."int" [      z   ]∙ _ [ () ]∙ _)
     success ([ ."nat" [ s    z   ]∙ _ [ () ]∙ _)
     success ([ _          [ s (s ()) ]∙ _)
-
-{-
-    getNats : CLValue config (MaybeCLMode config) → IO (String ⊎ List ℕ)
-    getNats clv = maybe′ readNatsFromFile (return $ validateNats $ default clv) $ get "-i" clv
-      where
-        readNatsFromFile : String → IO (String ⊎ List ℕ)
-        readNatsFromFile fp =
-          ♯ readFiniteFile fp >>= λ str →
-          ♯ return (parseAll parseℕ $ lines str)
-
-        validateNats : Maybe (List ℕ) → String ⊎ List ℕ
-        validateNats = maybe′ inj₂ (inj₁ "No Nat given")
-
-    putNats : CLValue config (MaybeCLMode config) → ℕ → IO _
-    putNats clv = maybe′ writeFile putStrLn (get "-o" clv) ∘ NatShow.show
-
-    success : CLValue config (MaybeCLMode config) → _
-    success clv =
-           if is-just $ get "--help" clv then putStrLn $ usage (CLI.options config)
-      else if is-just $ get "-V"     clv then putStrLn "Sum: version 0.9"
-      else ♯ getNats clv >>= λ ns → ♯ [ error , putNats clv ∘ foldl _+_ 0 ]′ ns
--}

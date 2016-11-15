@@ -7,6 +7,7 @@ module agdARGS.Data.Record
        where
 
 open import Data.Unit
+open import Data.Maybe hiding (map)
 open import Data.Product hiding (map)
 open import Function
 open import Category.Applicative
@@ -15,7 +16,11 @@ open import Category.Applicative
 -- to represent this set by a UniqueSortedList in order to ensure
 -- unicity of field names. Hence the following import:
 
+open import agdARGS.Data.Infinities hiding ([_])
 open import agdARGS.Data.UniqueSortedList STO
+open import agdARGS.Data.UniqueSortedList.SmartConstructors STO as SC
+  hiding (module MayFail ; module NeverFail)
+
 
 -- We then need to define what the content of each one of these
 -- fields is. This is taken care of by associating a set to each
@@ -32,12 +37,10 @@ record Fields (ℓ : Level) {lb ub : _} (args : UniqueSortedList lb ub) : Set (s
 open Fields public
 
 -- We expect to be able to lookup a field's type from a Fields definition
-
 [lookup] : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
            {arg : _} (pr : arg ∈ args) (fs : [Fields] ℓ args) → Set ℓ
 [lookup] z      (f , _)  = f
 [lookup] (s pr) (_ , fs) = [lookup] pr fs
-
 
 lookup : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub}
          {arg : _} (pr : arg ∈ args) (fs : Fields ℓ args) → Set ℓ
@@ -78,15 +81,56 @@ a [ f ] = mkFields [ a [ fields f ]]
 -- A record is then defined by aggregating an element of each one
 -- of these sets in a right-nested tuple.
 
-[Record] : {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub) (f : [Fields] ℓ args) → Set ℓ
+[Record] : ∀ {ℓ lb ub} (args : UniqueSortedList lb ub) (f : [Fields] ℓ args) → Set ℓ
 [Record] (lt ■)           f        = Lift ⊤
 [Record] (hd , lt ∷ args) (f , fs) = f × [Record] args fs
 
-record Record {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub) (f : Fields ℓ args) : Set ℓ where
+record Record {ℓ lb ub} (args : UniqueSortedList lb ub) (f : Fields ℓ args) : Set ℓ where
   constructor mkRecord
   field
     content : [Record] args (fields f)
 open Record public
+
+
+module NeverFail where
+
+  open SC.NeverFail
+
+  -- We may also insert a new field
+  [Finsert] : ∀ {ℓ lb ub} {args : UniqueSortedList lb ub}
+              arg .lt₁ .lt₂ → Set ℓ → [Fields] ℓ args → [Fields] ℓ (insert′ arg lt₁ lt₂ args)
+  [Finsert] {args = lt ■}           a lt₁ lt₂ S f = S , _
+  [Finsert] {args = hd , lt ∷ args} a lt₁ lt₂ S f with compare (↑ a) (↑ hd)
+  ... | tri< lt′ ¬eq ¬gt = S , f
+  ... | tri≈ ¬lt eq  ¬gt = S , proj₂ f
+  ... | tri> ¬lt ¬eq gt  = proj₁ f , [Finsert] a gt lt₂ S (proj₂ f)
+
+  Finsert : ∀ {ℓ lb ub} {args : UniqueSortedList lb ub}
+            arg .lt₁ .lt₂ → Set ℓ → Fields ℓ args → Fields ℓ (insert′ arg lt₁ lt₂ args)
+  Finsert arg lt₁ lt₂ S (mkFields f) = mkFields ([Finsert] arg lt₁ lt₂ S f)
+
+  [Rinsert] : ∀ {ℓ lb ub} {args : UniqueSortedList lb ub} {f : [Fields] ℓ args} arg .lt₁ .lt₂ →
+              {S : Set ℓ} (v : S) → [Record] args f → [Record] _ ([Finsert] arg lt₁ lt₂ S f)
+  [Rinsert] {args = lt ■}           a lt₁ lt₂ S f = S , _
+  [Rinsert] {args = hd , lt ∷ args} a lt₁ lt₂ S f with compare (↑ a) (↑ hd)
+  ... | tri< lt′ ¬eq ¬gt = S , f
+  ... | tri≈ ¬lt eq  ¬gt = S , proj₂ f
+  ... | tri> ¬lt ¬eq gt  = proj₁ f , [Rinsert] a gt lt₂ S (proj₂ f)
+
+  Rinsert : ∀ {ℓ lb ub} {args : UniqueSortedList lb ub} {f : Fields ℓ args} arg .lt₁ .lt₂ →
+            {S : Set ℓ} (v : S) → Record args f → Record _ (Finsert arg lt₁ lt₂ S f)
+  Rinsert arg lt₁ lt₂ v (mkRecord r) = mkRecord ([Rinsert] arg lt₁ lt₂ v r)
+
+
+[MRecord] : ∀ {ℓ lb ub} (args : UniqueSortedList lb ub) (f : [Fields] ℓ args) → Set ℓ
+[MRecord] (lt ■)           f        = Lift ⊤
+[MRecord] (hd , lt ∷ args) (f , fs) = Maybe f × [MRecord] args fs
+
+record MRecord {ℓ lb ub} (args : UniqueSortedList lb ub) (f : Fields ℓ args) : Set ℓ where
+  constructor mkMRecord
+  field
+    mcontent : [MRecord] args (fields f)
+open MRecord public
 
 -- The first thing we expect Records to deliver is the ability to
 -- project the content of a field given its name.

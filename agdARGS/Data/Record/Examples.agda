@@ -38,24 +38,21 @@ Person = Record Characteristics Attributes
 john : Person
 john = mkRecord $ 17 , true , "john" , lift tt
 
--- Or we may use the smart constructors requiring us to prove
--- that the field indeed exists. Once more we have to know
--- that "name", for instance, is at index s (s z)
-
-june : Person
-june = "age"    at z       ∷= 20
-     ⟨ "name"   at s (s z) ∷= "june"
-     ⟨ "idcard" at s z     ∷= true
-     ⟨ ⟨⟩
-
 -- Or, given that equality on Strings is decidable, we may
 -- rely on a decision procedure to generate this information
--- and write the simpler:
+-- and write the simpler (note that the order in which we set
+-- the fields does not matter):
+
+june : Person
+june = "age"    ∷= 20
+     ⟨ "name"   ∷= "june"
+     ⟨ "idcard" ∷= true
+     ⟨ ⟨⟩
 
 julie : Person
-julie = "age"    ∷= 22     
+julie = "idcard" ∷= false
       ⟨ "name"   ∷= "julie"
-      ⟨ "idcard" ∷= false
+      ⟨ "age"    ∷= 22
       ⟨ ⟨⟩
 
 -- Once we have our Persons, we can write an (applicative) validator

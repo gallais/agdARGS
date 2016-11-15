@@ -34,6 +34,9 @@ mutual
   data Commands (ℓ : Level) (names : USL) : Set (suc ℓ) where
     commands : Record names (tabulate (const (Command ℓ))) → Commands ℓ names
 
+basic : {ℓ : Level} → String → Arguments ℓ → Command ℓ
+basic str args = mkCommand str (, commands ⟨⟩) (, ⟨⟩) args
+
 record CLI (ℓ : Level) : Set (suc ℓ) where
   field
     name : String

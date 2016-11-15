@@ -18,7 +18,7 @@ open import agdARGS.Data.Infinities
 
 module ISTO = StrictTotalOrder (StrictTotalOrderT STO)
 open ISTO
-open ISTO using (_<_) public
+open ISTO using (_<_ ; compare) public
 
 infix  7 _■
 infixr 6 _,_∷_
@@ -30,13 +30,21 @@ weaken : ∀ {a b c} .(pr : a < b) → UniqueSortedList b c → UniqueSortedList
 weaken le₁ (le₂ ■)         = trans le₁ le₂ ■
 weaken le₁ (hd , le₂ ∷ xs) = hd , trans le₁ le₂ ∷ xs
 
-insert : ∀ a {lb ub} .(lt₁ : lb < ↑ a) .(lt₂ : ↑ a < ub)
-       (xs : UniqueSortedList lb ub) → Maybe $ UniqueSortedList lb ub
+insert : ∀ a {lb ub} .(lt₁ : lb < ↑ a) .(lt₂ : ↑ a < ub) →
+         UniqueSortedList lb ub → Maybe $ UniqueSortedList lb ub
 insert a lt₁ lt₂ (_ ■)          = just (a , lt₁ ∷ lt₂ ■)
 insert a lt₁ lt₂ (hd , lt′ ∷ xs) with compare (↑ a) (↑ hd)
 ... | tri< lt  ¬eq ¬gt = just (a , lt₁ ∷ hd , lt ∷ xs)
 ... | tri≈ ¬lt eq  ¬gt = nothing
 ... | tri> ¬lt ¬eq gt  = Maybe.map (_,_∷_ hd lt′) (insert a gt lt₂ xs)
+
+insert′ : ∀ a {lb ub} .(lt₁ : lb < ↑ a) .(lt₂ : ↑ a < ub) →
+          UniqueSortedList lb ub → UniqueSortedList lb ub
+insert′ a lt₁ lt₂ (_ ■)          = a , lt₁ ∷ lt₂ ■
+insert′ a lt₁ lt₂ (hd , lt′ ∷ xs) with compare (↑ a) (↑ hd)
+... | tri< lt  ¬eq ¬gt = a , lt₁ ∷ hd , lt ∷ xs
+... | tri≈ ¬lt eq  ¬gt = hd , lt′ ∷ xs
+... | tri> ¬lt ¬eq gt  = hd , lt′ ∷ insert′ a gt lt₂ xs
 
 import Data.List as List
 open List using (List)

@@ -22,44 +22,26 @@ open import agdARGS.System.Console.CLI.Parser
 open import agdARGS.System.Console.Modifiers
 open import agdARGS.System.Console.Options.Usual
 
-open import agdARGS.Data.Record.Usual
+open import agdARGS.Data.Record.Usual as RU hiding (_∷=_⟨_)
 
 files : Arguments _
 files = lotsOf inj₂
 
-lines : Modifier Level.zero "-l"
-lines = flag $ "description" ∷= lift "Print the newline count"
-             ⟨ ⟨⟩
-
-words : Modifier Level.zero "-w"
-words = flag $ "description" ∷= lift "Print the word count"
-             ⟨ ⟨⟩
-
-version : Modifier Level.zero "--version"
-version = flag $ "description" ∷= lift "Output version information and exit"
-               ⟨ ⟨⟩
-
-help : Modifier Level.zero "--help"
-help = flag $ "description" ∷= lift "Display this help"
-            ⟨ ⟨⟩
-
 WordCount : Command Level.zero
 WordCount = record
   { description = "Print newline, and word counts for each file"
-  ; subcommands = `[] , commands ⟨⟩
-  ; modifiers   = "-l" `∷ "-w" `∷ "--help" `∷ "--version" `∷ `[]
-                , "-l"        ∷= lines
-                ⟨ "-w"        ∷= words
-                ⟨ "--help"    ∷= help
-                ⟨ "--version" ∷= version
-                ⟨ ⟨⟩
-  ; arguments   = files
-  }
-
+  ; subcommands = , commands ⟨⟩
+  ; modifiers   = , "-l"        ∷= mkFlag "Print the newline count"
+                  ⟨ "-w"        ∷= mkFlag "Print the word count"
+                  ⟨ "--help"    ∷= mkFlag "Display this help"
+                  ⟨ "--version" ∷= mkFlag "Output version information and exit"
+                  ⟨ ⟨⟩
+  ; arguments   = files }
 
 cli : CLI Level.zero
-cli = record { name = "WordCount"
-             ; exec = WordCount }
+cli = record
+  { name = "WordCount"
+  ; exec = WordCount }
 
 record count : Set where
   field
