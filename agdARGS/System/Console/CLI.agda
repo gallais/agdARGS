@@ -1,6 +1,7 @@
 module agdARGS.System.Console.CLI where
 
 open import Level
+open import Size
 open import Data.Unit
 open import Data.Empty
 open import Data.Product
@@ -26,20 +27,20 @@ ParsedArguments (d , p) = Maybe $ Carrier d
 infix 4 commands_
 mutual
 
-  record Command (ℓ : Level) (name : String) : Set (suc ℓ) where
+  record Command (ℓ : Level) (name : String) {i : Size} : Set (suc ℓ) where
     inductive
     constructor mkCommand
     field
       description : String
-      subcommands : SubCommands ℓ
+      subcommands : SubCommands ℓ {i}
       modifiers   : Modifiers ℓ
       arguments   : Arguments ℓ
 
-  SubCommands : ∀ ℓ → Set (suc ℓ)
-  SubCommands ℓ = ∃ (Commands ℓ)
+  SubCommands : ∀ ℓ {i : Size} → Set (suc ℓ)
+  SubCommands ℓ {i} = ∃ λ names → Commands ℓ names {i}
 
-  data Commands (ℓ : Level) (names : USL) : Set (suc ℓ) where
-    commands_ : Record names (tabulate (λ {s} _ → Command ℓ s)) → Commands ℓ names
+  data Commands (ℓ : Level) (names : USL) : {i : Size} → Set (suc ℓ) where
+    commands_ : ∀ {i} → Record names (tabulate (λ {s} _ → Command ℓ s {i})) → Commands ℓ names {↑ i}
 
 noSubCommands : ∀ {ℓ} → SubCommands ℓ
 noSubCommands = , commands ⟨⟩

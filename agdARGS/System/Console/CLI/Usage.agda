@@ -18,39 +18,30 @@ Printer = ℕ → List String -- indentation level
 indent : ℕ → String → String
 indent i str = replicate i ' ' String.++ str
 
-pad
+open import agdARGS.System.Console.Modifiers
 
+usageModifier : {ℓ : Level} (name : String) (cs : Modifier ℓ name) → Printer
+usageModifier name mod i =
+  (case mod of λ
+    { (mkFlag f)   → indent i $ name String.++ indent 2 (lower $ `project "description" f)
+    ; (mkOption o) → indent i $ name String.++ indent 2 (lower $ `project "description" o) })
+  ∷ []
+
+usageModifiers : ∀ {ℓ} {names : USL} → Record names (toFields ℓ) → Printer
+usageModifiers = RU.foldr (λ _ mod p i → usageModifier _ mod i List.++ p i) (const [])
 
 mutual
 
-  {-# TERMINATING #-}
-  usageCommand : {ℓ : Level} (name : String) (r : Record _ (Command ℓ)) → Printer
+  usageCommand : ∀ {ℓ i} (name : String) (r : Command ℓ name {i}) → Printer
   usageCommand name r i =
-              (indent i $ name String.++ indent 2 (lower $ `project "description" r))
-            ∷ usageCommands (proj₂ $ `project "subcommands" r) (2 + i)
-      List.++ usageModifiers (proj₂ $ `project "modifiers" r)  (2 + i)
-
-  usageModifier : {ℓ : Level} (name : String) (cs : Modifier ℓ name) → Printer
-  usageModifier name mod i =
-    (case mod of λ
-      { (flag f)   → indent i $ name String.++ indent 2 (lower $ `project "description" f)
-      ; (option o) → indent i $ name String.++ indent 2 (lower $ `project "description" o) })
-    ∷ []
-
-  usageModifiers : {ℓ : Level} {names : USL} (cs : Record names (Modifiers ℓ)) → Printer
-  usageModifiers cs = go _ (content cs) ∘ (2 +_) where
-    go : {ℓ : Level} {lb ub : _} (names : UniqueSortedList lb ub)
-         (cs : [Record] names ([tabulate] names $ λ {s} → const (Modifier ℓ s))) → Printer
-    go (_ ■)               cs       i = []
-    go (arg UU., _ ∷ args) (c , cs) i = usageModifier arg c i List.++  go args cs i
+              (indent i $ name String.++ indent 2 (description r))
+            ∷ usageCommands (proj₂ $ subcommands r) (2 + i)
+      List.++ usageModifiers (proj₂ $ modifiers r) (2 + i)
 
 
-  usageCommands : {ℓ : Level} {names : USL} (cs : Commands ℓ names) → Printer
-  usageCommands (commands cs) = go _ (content cs) ∘ (2 +_) where
-    go : {ℓ : Level} {lb ub : _} (names : UniqueSortedList lb ub)
-         (cs : [Record] names ([tabulate] _ (const (Record _ (Command ℓ))))) → ℕ → List String
-    go (_ ■)               cs       i = []
-    go (arg UU., _ ∷ args) (c , cs) i = usageCommand arg c i List.++ go args cs i
+  usageCommands : ∀ {ℓ i} {names : USL} (cs : Commands ℓ names {i}) → Printer
+  usageCommands (commands (mkRecord cs)) =
+    RU.[foldr] (λ _ c p i → usageCommand _ c i List.++ p i) (const []) cs
 
 usage : {ℓ : Level} (cli : CLI ℓ) → String
 usage cli = unlines ∘ (_$ 0) ∘ usageCommand (name cli) $ exec cli
