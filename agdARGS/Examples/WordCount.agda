@@ -28,7 +28,7 @@ open import agdARGS.Data.Record.Usual as RU hiding (_∷=_⟨_)
 WordCount : Command _ "WordCount"
 WordCount = record
   { description = "Print newline, and word counts for each file"
-  ; subcommands = , commands ⟨⟩
+  ; subcommands = noSubCommands
   ; modifiers   = , "-l"        ∷= flag "Print the newline count"
                   ⟨ "-w"        ∷= flag "Print the word count"
                   ⟨ "--help"    ∷= flag "Display this help"

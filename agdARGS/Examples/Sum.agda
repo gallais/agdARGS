@@ -32,19 +32,15 @@ open import agdARGS.System.Console.Modifiers
 open import agdARGS.System.Console.Options.Usual
 
 sum-cli : CLI Level.zero
-sum-cli = record { name = "sum"
-                 ; exec = sum-exec } where
-
-  sum-exec = record { description = "sum"
-                    ; subcommands = , commands sum-exec-subs
-                    ; modifiers   = , sum-exec-mods
-                    ; arguments   = none
-                    } where
-
-    sum-exec-mods = "--version" ∷= flag "Output version information and exit" ⟨ ⟨⟩
-    sum-exec-subs = "nat" ∷= basic (lotsOf parseℕ)
-                  ⟨ "int" ∷= basic (lotsOf parseℤ)
-                  ⟨ ⟨⟩
+sum-cli = record { name = "sum" ; exec = record
+ { description = "sum"
+ ; subcommands = , < "nat" ∷= basic (lotsOf Nat)
+                   ⟨ "int" ∷= basic (lotsOf Int)
+                   ⟨ ⟨⟩
+ ; modifiers   = , "--version" ∷= flag "Output version information and exit"
+                 ⟨ ⟨⟩
+ ; arguments   = none
+ } }
 
 open import IO
 open import Coinduction
