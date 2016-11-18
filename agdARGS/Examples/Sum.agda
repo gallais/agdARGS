@@ -28,7 +28,7 @@ open import agdARGS.Data.UniqueSortedList.Usual
 open import agdARGS.Data.Record.Usual
 
 open import agdARGS.System.Console.Options.Domain
-open import agdARGS.System.Console.Modifiers as Mods using (flag)
+open import agdARGS.System.Console.Modifiers
 open import agdARGS.System.Console.Options.Usual
 
 sum-cli : CLI Level.zero
@@ -41,7 +41,7 @@ sum-cli = record { name = "sum"
                     ; arguments   = none
                     } where
 
-    sum-exec-mods = "--version" Mods.∷= flag "Output version information and exit" ⟨ ⟨⟩
+    sum-exec-mods = "--version" ∷= flag "Output version information and exit" ⟨ ⟨⟩
     sum-exec-subs = "nat" ∷= basic (lotsOf parseℕ)
                   ⟨ "int" ∷= basic (lotsOf parseℤ)
                   ⟨ ⟨⟩

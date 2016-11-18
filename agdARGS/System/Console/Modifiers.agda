@@ -11,16 +11,16 @@ open import Function
 open import agdARGS.Algebra.Magma
 open import agdARGS.Data.String
 open import agdARGS.Data.Error as Error hiding (return)
-open import agdARGS.Data.Record.Usual as RU hiding (_∷=_⟨_)
+open import agdARGS.Data.Record.Usual as RU public
 open import agdARGS.System.Console.Options.Domain
 
 Flag : (ℓ : Level) → Fields (suc ℓ) _
-Flag ℓ = Type $ "description" RU.∷= Lift String
+Flag ℓ = Type $ "description" ∷= Lift String
               ⟨ ⟨⟩
 
 Option : (ℓ : Level) → Fields (suc ℓ) _
-Option ℓ = Type $ "description" RU.∷= Lift String
-                ⟨ "arguments"   RU.∷= Σ[ d ∈ Domain ℓ ] Parser d
+Option ℓ = Type $ "description" ∷= Lift String
+                ⟨ "arguments"   ∷= Σ[ d ∈ Domain ℓ ] Parser d
                 ⟨ ⟨⟩
 
 data Modifier (ℓ : Level) (name : String) : Set (suc ℓ) where
@@ -28,7 +28,7 @@ data Modifier (ℓ : Level) (name : String) : Set (suc ℓ) where
   mkOption  : Record _ (Option ℓ)  → Modifier ℓ name
 
 flag : ∀ {ℓ name} → String → Modifier ℓ name
-flag str = mkFlag $ "description" RU.∷= lift str ⟨ ⟨⟩
+flag str = mkFlag $ "description" ∷= lift str ⟨ ⟨⟩
 
 toFields : ∀ ℓ {lb ub} {names : UniqueSortedList lb ub} → Fields (suc ℓ) names
 toFields ℓ = tabulate $ λ {s} → const (Modifier ℓ s)
@@ -36,10 +36,8 @@ toFields ℓ = tabulate $ λ {s} → const (Modifier ℓ s)
 Modifiers : ∀ ℓ → Set (suc ℓ)
 Modifiers ℓ = Σ[ names ∈ USL ] Record names (toFields ℓ)
 
-infixr 5 _∷=_⟨_
-_∷=_⟨_ : ∀ {ℓ} {args : USL} {fs : Fields (suc ℓ) args}
-         (f : String) → Modifier ℓ f → Record args fs → Record _ _
-f ∷= v ⟨ fs = f RU.∷= v ⟨ fs
+noModifiers : ∀ {ℓ} → Modifiers ℓ
+noModifiers = , ⟨⟩
 
 ParsedModifier : {ℓ : Level} {name : String} → Modifier ℓ name → Set ℓ
 ParsedModifier (mkFlag f)   = Lift ⊤

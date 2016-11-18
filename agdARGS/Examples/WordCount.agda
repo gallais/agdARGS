@@ -25,11 +25,6 @@ open import agdARGS.System.Console.Options.Usual
 
 open import agdARGS.Data.Record.Usual as RU hiding (_∷=_⟨_)
 
-FilePath = String
-
-filePath : String → Error FilePath
-filePath = inj₂
-
 WordCount : Command _ "WordCount"
 WordCount = record
   { description = "Print newline, and word counts for each file"
