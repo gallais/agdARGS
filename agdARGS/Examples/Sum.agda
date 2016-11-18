@@ -18,7 +18,7 @@ open import agdARGS.Relation.Nullary
 
 
 open import agdARGS.System.Console.CLI
-open import agdARGS.System.Console.CLI.Parser
+open import agdARGS.System.Console.CLI.Usage
 
 open import agdARGS.Data.Error
 open import agdARGS.Algebra.Magma
@@ -33,11 +33,12 @@ open import agdARGS.System.Console.Options.Usual
 
 sum-cli : CLI Level.zero
 sum-cli = record { name = "sum" ; exec = record
- { description = "sum"
- ; subcommands = , < "nat" ∷= basic (lotsOf Nat)
-                   ⟨ "int" ∷= basic (lotsOf Int)
+ { description = "Takes a list of number as an input and sums it"
+ ; subcommands = , < "nat" ∷= record (basic $ lotsOf Nat) { description = "The inputs will be nats" }
+                   ⟨ "int" ∷= record (basic $ lotsOf Int) { description = "The inputs will be ints" }
                    ⟨ ⟨⟩
  ; modifiers   = , "--version" ∷= flag "Output version information and exit"
+                 ⟨ "-h"        ∷= flag "Display this help"
                  ⟨ ⟨⟩
  ; arguments   = none
  } }
@@ -58,7 +59,10 @@ main = withCLI sum-cli $ putStrLn ∘ success where
   sumInt = maybe (List.foldr Int._+_ (+ 0)) (+ 0)
     
   success : ParsedInterface sum-cli → String
-  success ([                 ._ ∷= _ & _ ])  = "meh"
+  success ([                 ._ ∷= m & _ ])  =
+         if is-just (m ‼ "--version") then "Sum version: 0.1"
+    else if is-just (m ‼ "-h")        then usage sum-cli
+    else ""
   success ([ ."int" [   z ]∙ ._ ∷= _ & vs ]) = Int.show     $ sumInt vs
   success ([ ."nat" [ s z ]∙ ._ ∷= _ & vs ]) = NatShow.show $ sumNat vs
 

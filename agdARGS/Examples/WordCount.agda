@@ -20,6 +20,8 @@ open import agdARGS.Data.Table as Table
 open import agdARGS.System.Environment.Arguments
 open import agdARGS.System.Console.CLI
 open import agdARGS.System.Console.CLI.Usual
+open import agdARGS.System.Console.CLI.Usage
+
 open import agdARGS.System.Console.Modifiers
 open import agdARGS.System.Console.Options.Usual
 
@@ -104,6 +106,6 @@ main = withCLI cli success where
   success : ParsedInterface cli → IO _
   success (theCommand mods args) =
          if is-just (mods ‼ "--version") then putStrLn "WordCount: version 0.1"
-    else if is-just (mods ‼ "--help")    then putStrLn "TODO: usage"
+    else if is-just (mods ‼ "--help")    then putStrLn (usage cli)
     else maybe (treatFiles mods) (error "No file provided") args
   success (subCommand () _)
