@@ -122,6 +122,15 @@ module NeverFail where
   Rinsert arg lt₁ lt₂ v (mkRecord r) = mkRecord ([Rinsert] arg lt₁ lt₂ v r)
 
 
+[foldr] : ∀ {ℓ ℓ′ lb ub} {names : UniqueSortedList lb ub} {A : Set ℓ′} {f : ∀ {n} (pr : n ∈ names) → Set ℓ} →
+          (∀ {n} pr → f {n} pr → A → A) → A → [Record] names ([tabulate] names f) → A
+[foldr] {names = lt ■}            c n r       = n
+[foldr] {names = hd , lt ∷ names} c n (v , r) = c z v $ [foldr] (c ∘ s) n r
+
+foldr : ∀ {ℓ ℓ′ lb ub} {names : UniqueSortedList lb ub}  {A : Set ℓ′} {f : ∀ {n} (pr : n ∈ names) → Set ℓ} →
+        (∀ {n} pr → f {n} pr → A → A) → A → Record names (tabulate f) → A
+foldr c n = [foldr] c n ∘ content
+
 [MRecord] : ∀ {ℓ lb ub} (args : UniqueSortedList lb ub) (f : [Fields] ℓ args) → Set ℓ
 [MRecord] (lt ■)           f        = Lift ⊤
 [MRecord] (hd , lt ∷ args) (f , fs) = Maybe f × [MRecord] args fs

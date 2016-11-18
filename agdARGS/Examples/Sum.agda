@@ -52,10 +52,10 @@ main : _
 main = withCLI sum-cli $ putStrLn ∘ success where
 
   sumNat : Maybe (List ℕ) → ℕ
-  sumNat = maybe (foldr Nat._+_ 0) 0
+  sumNat = maybe (List.foldr Nat._+_ 0) 0
 
   sumInt : Maybe (List ℤ) → ℤ
-  sumInt = maybe (foldr Int._+_ (+ 0)) (+ 0)
+  sumInt = maybe (List.foldr Int._+_ (+ 0)) (+ 0)
     
   success : ParsedInterface sum-cli → String
   success ([                 ._ ∷= _ & _ ])  = "meh"

@@ -1,6 +1,10 @@
 module agdARGS.System.Console.Options.Usual where
 
 open import Level
+open import Data.Nat using (ℕ)
+open import agdARGS.Data.Nat.Read
+open import Data.Integer using (ℤ)
+open import agdARGS.Data.Integer.Read
 open import Data.Empty
 open import Data.Product
 open import Data.String
@@ -29,3 +33,9 @@ filePath = Some FilePath , inj₂
 Url = String
 url : Arguments zero
 url = Some Url , inj₂
+
+Nat : Arguments zero
+Nat = Some ℕ , parseℕ
+
+Int : Arguments zero
+Int = Some ℤ , parseℤ
