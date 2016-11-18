@@ -17,9 +17,16 @@ open import agdARGS.System.Console.Options.Usual
 open import agdARGS.System.Console.Modifiers
 open import Function
 
+ParsedArgument : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → Set ℓ
+ParsedArgument (d , p) = Carrier d
+
+ParsedArguments : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → Set ℓ
+ParsedArguments (d , p) = Maybe $ Carrier d
+
+infix 4 commands_
 mutual
 
-  record Command (ℓ : Level) : Set (suc ℓ) where
+  record Command (ℓ : Level) (name : String) : Set (suc ℓ) where
     inductive
     constructor mkCommand
     field
@@ -32,15 +39,23 @@ mutual
   SubCommands ℓ = ∃ (Commands ℓ)
 
   data Commands (ℓ : Level) (names : USL) : Set (suc ℓ) where
-    commands : Record names (tabulate (const (Command ℓ))) → Commands ℓ names
+    commands_ : Record names (tabulate (λ {s} _ → Command ℓ s)) → Commands ℓ names
 
-basic : {ℓ : Level} → String → Arguments ℓ → Command ℓ
-basic str args = mkCommand str (, commands ⟨⟩) (, ⟨⟩) args
+noSubCommands : ∀ {ℓ} → SubCommands ℓ
+noSubCommands = , commands ⟨⟩
+
+infix 4 commandsSugar
+commandsSugar : ∀ {ℓ names} → Record names _ → Commands ℓ names
+commandsSugar = commands_
+syntax commandsSugar t = < t
+
+basic : {ℓ : Level} {s : String} → Arguments ℓ → Command ℓ s
+basic {s = str} args = mkCommand str (, commands ⟨⟩) (, ⟨⟩) args
 
 record CLI (ℓ : Level) : Set (suc ℓ) where
   field
     name : String
-    exec : Command ℓ
+    exec : Command ℓ name
 open CLI public
 open Command public
 
@@ -51,7 +66,7 @@ open import Relation.Binary.PropositionalEquality
 
 mutual
 
-  data ParsedCommand {ℓ : Level} : (c : Command ℓ) → Set (suc ℓ) where
+  data ParsedCommand {ℓ s} : (c : Command ℓ s) → Set (suc ℓ) where
     theCommand : {descr : String}
                  {subs : Σ[ names ∈ USL ] Commands ℓ names}
                  {modNames : USL} {mods : Record modNames (toFields ℓ)}
@@ -67,24 +82,8 @@ mutual
                  {args : Σ[ d ∈ Domain ℓ ] Parser d}
                  → ParsedCommand (mkCommand descr (subs , commands cs) mods args)
 
-{-
-  data ParsedModifiers {ℓ : Level} {modNames : USL} (mods : Record modNames (toFields ℓ)) : Set ℓ where
-    theModifiers : Record modNames (Maybe RU.[ Type $ RU.map (const ParsedModifier) mods ]) → ParsedModifiers mods
--}
-
-  ParsedModifiers : ∀ {ℓ} {names : USL} (mods : Record names (toFields ℓ)) → Set ℓ
-  ParsedModifiers {names = names} mods =
-    Record names (Maybe RU.[ Type $ RU.map (const ParsedModifier) mods ])
-
-  ParsedModifier : {ℓ : Level} {name : String} → Modifier ℓ name → Set ℓ
-  ParsedModifier (flag f)   = Lift ⊤
-  ParsedModifier (option o) = Carrier $ proj₁ $ `project "arguments" o
-
-  ParsedArgument : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → Set ℓ
-  ParsedArgument (d , p) = Carrier d
-
-  ParsedArguments : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → Set ℓ
-  ParsedArguments (d , p) = Maybe $ Carrier d
+ParsedInterface : ∀ {ℓ} → CLI ℓ → Set (suc ℓ)
+ParsedInterface i = ParsedCommand (exec i)
 
 infix  1 [_
 infixr 2 _[_]∙_
@@ -93,34 +92,7 @@ pattern [_ p = p
 pattern _∷=_&_] descr mods args = theCommand {descr} mods args
 pattern _[_]∙_ desc pr sub     = subCommand {sub = desc} pr sub
 
-open import agdARGS.Data.Error as Error renaming (return to ret)
-
-updateModifier :
-  {ℓ : Level} {names : USL} {mods : Record names (toFields ℓ)} (ps : ParsedModifiers mods) →
-  {name : String} (pr : name ∈ names) (p : ParsedModifier (project′ pr mods)) →
-  Error (ParsedModifiers mods)
-updateModifier {ℓ} ps pr p = mkRecord <$> go (content ps) pr p
-
-  where
-
-  go : {lb ub : _} {names : UniqueSortedList lb ub} {mods : Record names (toFields ℓ)} →
-       let fs = fields $ Maybe RU.[ Type $ RU.map (const ParsedModifier) mods ] in
-       (ps : [Record] names fs) {name : String} (pr : name ∈ names) (p : ParsedModifier (project′ pr mods)) →
-       Error $ [Record] names fs
-  go (q       , ps) (s pr) p = (λ ps → q , ps) <$> go ps pr p
-  go (nothing , ps) z      p = ret (just p , ps)
-  go {mods = mkRecord (mod , mods)} (just q  , ps) {name} z p = (_, ps) <$>
-    (case mod return (λ m → ParsedModifier m → ParsedModifier m → Error (Maybe (ParsedModifier m))) of λ
-      { (flag f)   → λ _ _ → throw $ concatList $ "Flag " ∷ name ∷ " set twice" ∷ []
-      ; (option o) → 
-        let dom = proj₁ $ `project "arguments" o
-        in case dom return (λ d → Carrier d → Carrier d → Error (Maybe (Carrier d))) of λ
-          { (Some _) → λ _ _ → throw $ concatList $ "Option " ∷ name ∷ " set twice" ∷ []
-          ; (ALot m) → λ p q → ret (just (RawMagma._∙_ m p q))
-          }
-      }) p q
-
-
+open import agdARGS.Data.Error as Error hiding (return)
 open import Data.Sum
 
 updateArgument :
@@ -139,7 +111,7 @@ parseArguments p str dft = foldl (cons p) (inj₂ dft) str
     cons p (inj₂ nothing)  str = just <$> proj₂ p str
     cons p (inj₂ (just v)) str with proj₁ p | proj₂ p
     ... | Some _ | _      = inj₁ "Too many arguments: only one expected"
-    ... | ALot m | parser = parser str >>= λ w → ret (just (v ∙ w))
+    ... | ALot m | parser = parser str >>= λ w → Error.return (just (v ∙ w))
       where open RawMagma m
 
 [dummy] : {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub) {fs : [Fields] ℓ args} →
@@ -154,24 +126,23 @@ dummy = mkRecord $ [dummy] _
 open import agdARGS.Relation.Nullary
 open import agdARGS.Data.UniqueSortedList.Usual
 
-parseModifier : {ℓ : Level} (c : Command ℓ) {x : String} (recyxs recxs : Error $ ParsedCommand c)
-                (pr : x ∈ proj₁ (modifiers c)) → Error $ ParsedCommand c
+parseModifier : ∀ {ℓ s} (c : Command ℓ s) {x : String} (recyxs recxs : Error (ParsedCommand c))
+                → x ∈ proj₁ (modifiers c) → Error $ ParsedCommand c
 parseModifier (mkCommand descr (subs , commands cs) mods args) {x} recyxs recxs pr = 
   (case (project′ pr (proj₂ $ mods)) return (λ m → Error (ParsedModifier m)) of λ
-        { (flag f)   → inj₂ $ lift tt
-        ; (option o) → proj₂ (`project "arguments" o) x
+        { (mkFlag f)   → inj₂ $ lift tt
+        ; (mkOption o) → proj₂ (`project "arguments" o) x
         })
   >>= λ p → recyxs >>= λ rec →
       case rec of λ
         { (theCommand mods args) → (λ m → theCommand m args) <$> updateModifier mods pr p
-        ; (subCommand _ _)       → throw "Found a flag for command XXX with subcommand YYY" }
+        ; (subCommand _ _)       → throw "Found a mkFlag for command XXX with subcommand YYY" }
 
-parseArgument : {ℓ : Level} (c : Command ℓ) (recyxs : String ⊎ ParsedCommand c)
-                (x : String) → String ⊎ ParsedCommand c
+parseArgument : ∀ {ℓ s} (c : Command ℓ s) → Error (ParsedCommand c) →
+                String → Error $ ParsedCommand c
 parseArgument (mkCommand descr (sub , commands subs) mods (d , p)) recyxs x =
   recyxs >>= λ rec →
     case rec of λ
       { (theCommand mods args) → theCommand mods <$> updateArgument d p args x
       ; (subCommand _ _)       → throw "Found and argument for command XXX with subcommand YYY"
       }
-

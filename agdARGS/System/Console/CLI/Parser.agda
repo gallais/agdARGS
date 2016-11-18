@@ -13,15 +13,14 @@ open import agdARGS.Data.UniqueSortedList.Usual
 open import agdARGS.Data.Record.Usual
 open import agdARGS.System.Console.CLI
 
-
 mutual
 
-  parseSubCommand : ∀ {ℓ} (c : Command ℓ) {x} → List String →
+  parseSubCommand : ∀ {ℓ s} (c : Command ℓ s) {x} → List String →
                     x ∈ proj₁ (subcommands c) → Error $ ParsedCommand c
   parseSubCommand (mkCommand _ (subs , commands cs) _ _) xs pr =
     (λ s → subCommand pr s) <$> parseCommand (project′ pr cs) xs
 
-  parseCommand : ∀ {ℓ} (c : Command ℓ) → List String → Error $ ParsedCommand c
+  parseCommand : ∀ {ℓ s} (c : Command ℓ s) → List String → Error $ ParsedCommand c
   parseCommand c []          = throw "Not enough arguments"
   parseCommand c ("--" ∷ xs) = theCommand dummy
                              <$> parseArguments (arguments c) xs nothing
@@ -36,3 +35,6 @@ mutual
         recxs  = parseCommand c xs
     in dec (x ∈? proj₁ (modifiers c)) (parseModifier c recyxs recxs) $ 
     const $ parseArgument c recyxs x
+
+parseInterface : ∀ {ℓ} (c : CLI ℓ) → List String → Error $ ParsedInterface c
+parseInterface c = parseCommand (exec c)

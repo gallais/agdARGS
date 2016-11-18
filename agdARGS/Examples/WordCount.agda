@@ -15,28 +15,31 @@ open import Data.List as List
 open import Data.Char
 open import Function
 import agdARGS.Data.String as Str
+open import agdARGS.Data.Error using (Error)
 open import agdARGS.Data.Table as Table
 open import agdARGS.System.Environment.Arguments
 open import agdARGS.System.Console.CLI
-open import agdARGS.System.Console.CLI.Parser
+open import agdARGS.System.Console.CLI.Usual
 open import agdARGS.System.Console.Modifiers
 open import agdARGS.System.Console.Options.Usual
 
 open import agdARGS.Data.Record.Usual as RU hiding (_∷=_⟨_)
 
-files : Arguments _
-files = lotsOf inj₂
+FilePath = String
 
-WordCount : Command Level.zero
+filePath : String → Error FilePath
+filePath = inj₂
+
+WordCount : Command _ "WordCount"
 WordCount = record
   { description = "Print newline, and word counts for each file"
   ; subcommands = , commands ⟨⟩
-  ; modifiers   = , "-l"        ∷= mkFlag "Print the newline count"
-                  ⟨ "-w"        ∷= mkFlag "Print the word count"
-                  ⟨ "--help"    ∷= mkFlag "Display this help"
-                  ⟨ "--version" ∷= mkFlag "Output version information and exit"
+  ; modifiers   = , "-l"        ∷= flag "Print the newline count"
+                  ⟨ "-w"        ∷= flag "Print the word count"
+                  ⟨ "--help"    ∷= flag "Display this help"
+                  ⟨ "--version" ∷= flag "Output version information and exit"
                   ⟨ ⟨⟩
-  ; arguments   = files }
+  ; arguments   = lotsOf filePath }
 
 cli : CLI Level.zero
 cli = record
@@ -56,8 +59,6 @@ nb-lines count0 = 0
 _∙_ : count → count → count
 nb-words (c ∙ d) = (_+_ on nb-words) c d
 nb-lines (c ∙ d) = (_+_ on nb-lines) c d
-
-FilePath = String
 
 showCounts : ParsedModifiers (proj₂ (modifiers WordCount)) →
              List (FilePath × count) → String
@@ -98,23 +99,16 @@ f onFiniteFiles (fp ∷ fps) =
      ♯ return ((fp , f content) ∷ rest))
 
 main : _
-main = run $
-  ♯ getArgs >>= λ args →
-  ♯ [ error , success ]′ (parseCommand (exec cli) args)
+main = withCLI cli success where
 
-  where
+  treatFiles : ParsedModifiers (proj₂ (modifiers WordCount)) → List FilePath → IO _
+  treatFiles opts fps =
+    ♯ (wc ∘ String.toList onFiniteFiles fps) >>= λ counts →
+    ♯ (putStrLn $ showCounts opts counts)
 
-    error : String → IO _
-    error = putStrLn ∘ (String._++_ "*** Error: ")
-
-    treatFiles : ParsedModifiers (proj₂ (modifiers WordCount)) → List FilePath → IO _
-    treatFiles opts fps =
-      ♯ (wc ∘ String.toList onFiniteFiles fps) >>= λ counts →
-      ♯ (putStrLn $ showCounts opts counts)
-
-    success : ParsedCommand (exec cli) → IO _
-    success (theCommand mods args) =
-           if is-just (mods ‼ "--version") then putStrLn "WordCount: version 0.1"
-      else if is-just (mods ‼ "--help")    then putStrLn "TODO: usage"
-      else maybe (treatFiles mods) (error "No file provided") args
-    success (subCommand () _)
+  success : ParsedInterface cli → IO _
+  success (theCommand mods args) =
+         if is-just (mods ‼ "--version") then putStrLn "WordCount: version 0.1"
+    else if is-just (mods ‼ "--help")    then putStrLn "TODO: usage"
+    else maybe (treatFiles mods) (error "No file provided") args
+  success (subCommand () _)

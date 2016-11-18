@@ -28,7 +28,7 @@ open import agdARGS.Data.UniqueSortedList.Usual
 open import agdARGS.Data.Record.Usual
 
 open import agdARGS.System.Console.Options.Domain
-open import agdARGS.System.Console.Modifiers as Mods using (mkFlag)
+open import agdARGS.System.Console.Modifiers as Mods using (flag)
 open import agdARGS.System.Console.Options.Usual
 
 sum-cli : CLI Level.zero
@@ -41,38 +41,32 @@ sum-cli = record { name = "sum"
                     ; arguments   = none
                     } where
 
-    sum-exec-mods = "--version" Mods.∷= mkFlag "Output version information and exit" ⟨ ⟨⟩
-    sum-exec-subs = "nat" ∷= basic "exec" (lotsOf parseℕ)
-                  ⟨ "int" ∷= basic "exec" (lotsOf parseℤ)
+    sum-exec-mods = "--version" Mods.∷= flag "Output version information and exit" ⟨ ⟨⟩
+    sum-exec-subs = "nat" ∷= basic (lotsOf parseℕ)
+                  ⟨ "int" ∷= basic (lotsOf parseℤ)
                   ⟨ ⟨⟩
 
 open import IO
 open import Coinduction
 import Data.Nat.Show as NatShow
+open import agdARGS.System.Console.CLI.Usual
 open import agdARGS.System.Environment.Arguments
 
 main : _
-main = run $
-  ♯ getArgs IO.>>= λ args →
-  ♯ [ error , success ]′ (parseCommand (exec sum-cli) args)
+main = withCLI sum-cli $ putStrLn ∘ success where
 
-  where
+  sumNat : Maybe (List ℕ) → ℕ
+  sumNat = maybe (foldr Nat._+_ 0) 0
 
-    error : String → _
-    error = putStrLn ∘ String._++_ "*** Error: "
-
-    sumNat : Maybe (List ℕ) → ℕ
-    sumNat = maybe (foldr Nat._+_ 0) 0
-
-    sumInt : Maybe (List ℤ) → ℤ
-    sumInt = maybe (foldr Int._+_ (+ 0)) (+ 0)
+  sumInt : Maybe (List ℤ) → ℤ
+  sumInt = maybe (foldr Int._+_ (+ 0)) (+ 0)
     
-    success : ParsedCommand (exec sum-cli) → IO _
-    success ([                 ."sum"  ∷= _ & _ ])  = putStrLn "meh"
-    success ([ ."int" [   z ]∙ ."exec" ∷= _ & vs ]) = putStrLn $ Int.show     $ sumInt vs
-    success ([ ."nat" [ s z ]∙ ."exec" ∷= _ & vs ]) = putStrLn $ NatShow.show $ sumNat vs
+  success : ParsedInterface sum-cli → String
+  success ([                 ._ ∷= _ & _ ])  = "meh"
+  success ([ ."int" [   z ]∙ ._ ∷= _ & vs ]) = Int.show     $ sumInt vs
+  success ([ ."nat" [ s z ]∙ ._ ∷= _ & vs ]) = NatShow.show $ sumNat vs
 
-    -- empty cases
-    success ([ ."int" [      z   ]∙ _ [ () ]∙ _)
-    success ([ ."nat" [ s    z   ]∙ _ [ () ]∙ _)
-    success ([ _          [ s (s ()) ]∙ _)
+  -- empty cases
+  success ([ ."int" [      z   ]∙ _ [ () ]∙ _)
+  success ([ ."nat" [ s    z   ]∙ _ [ () ]∙ _)
+  success ([ _          [ s (s ()) ]∙ _)
