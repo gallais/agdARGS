@@ -1,0 +1,198 @@
+\begin{code}%
+\>\AgdaKeyword{module} \AgdaModule{agdARGS.Examples.Sum} \AgdaKeyword{where}\<%
+\\
+%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Nat} \<[25]%
+\>[25]\AgdaSymbol{as} \AgdaModule{Nat}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Integer} \AgdaSymbol{as} \AgdaModule{Int}\<%
+\\
+%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Level} \AgdaSymbol{as} \AgdaModule{Level}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Empty}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Product}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Bool}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Maybe}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Sum} \AgdaSymbol{as} \AgdaModule{Sum}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.String} \AgdaSymbol{as} \AgdaModule{String}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Data.String} \AgdaSymbol{as} \AgdaModule{Str}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.List} \AgdaSymbol{as} \AgdaModule{List}\<%
+\\
+\>\AgdaKeyword{import} \AgdaModule{agdARGS.Data.List} \AgdaSymbol{as} \AgdaModule{List}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Function}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Relation.Nullary}\<%
+\\
+%
+\\
+%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.CLI}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.CLI.Parser}\<%
+\\
+%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Data.Error}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Algebra.Magma}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Data.Nat.Read}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Data.Integer.Read}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Data.UniqueSortedList.Usual}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.Data.Record.Usual}\<%
+\\
+%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.Options.Domain}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.Modifiers} \AgdaSymbol{as} \AgdaModule{Mods} \AgdaKeyword{using} \AgdaSymbol{(}\AgdaFunction{flag}\AgdaSymbol{)}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.Options.Usual}\<%
+\\
+\>\AgdaFunction{Sum} \AgdaSymbol{:} \AgdaRecord{Command} \AgdaSymbol{\_} \AgdaString{"sum"}\<%
+\end{code}
+
+%<*sum>
+\begin{code}%
+\>\AgdaFunction{Sum} \AgdaSymbol{=} \AgdaKeyword{record}\<%
+\\
+\> \AgdaSymbol{\{} \AgdaField{description} \<[16]%
+\>[16]\AgdaSymbol{=} \<[19]%
+\>[19]\AgdaString{"Sum its arguments"}\<%
+\\
+\> \AgdaSymbol{;} \AgdaField{subcommands} \<[16]%
+\>[16]\AgdaSymbol{=}\<%
+\\
+\> \AgdaFunction{,} \<[4]%
+\>[4]\AgdaFunction{<} \<[7]%
+\>[7]\AgdaString{"nat"} \AgdaFunction{∷=} \AgdaFunction{basic} \AgdaSymbol{(}\AgdaFunction{lotsOf} \AgdaFunction{parseℕ}\AgdaSymbol{)}\<%
+\\
+\>[0]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{⟨} \<[7]%
+\>[7]\AgdaString{"int"} \AgdaFunction{∷=} \AgdaFunction{basic} \AgdaSymbol{(}\AgdaFunction{lotsOf} \AgdaFunction{parseℤ}\AgdaSymbol{)} \AgdaFunction{⟨} \AgdaFunction{⟨⟩}\<%
+\\
+\> \AgdaSymbol{;} \AgdaField{modifiers} \<[16]%
+\>[16]\AgdaSymbol{=} \AgdaFunction{,} \AgdaString{"-v"} \AgdaFunction{∷=} \AgdaFunction{flag} \AgdaString{"Version nb"} \AgdaFunction{⟨} \AgdaFunction{⟨⟩}\<%
+\\
+\> \AgdaSymbol{;} \AgdaField{arguments} \<[16]%
+\>[16]\AgdaSymbol{=} \<[19]%
+\>[19]\AgdaFunction{none} \AgdaSymbol{\}}\<%
+\end{code}
+%</sum>
+
+\begin{code}%
+\>\AgdaFunction{cli} \AgdaSymbol{:} \AgdaRecord{CLI} \AgdaPrimitive{Level.zero}\<%
+\\
+\>\AgdaFunction{cli} \AgdaSymbol{=} \AgdaKeyword{record} \AgdaSymbol{\{} \AgdaField{name} \AgdaSymbol{=} \AgdaString{"sum"}\<%
+\\
+\>[4]\AgdaIndent{13}{}\<[13]%
+\>[13]\AgdaSymbol{;} \AgdaField{exec} \AgdaSymbol{=} \AgdaFunction{Sum} \AgdaSymbol{\}} \AgdaKeyword{where}\<%
+\\
+%
+\\
+\>[0]\AgdaIndent{2}{}\<[2]%
+\>[2]\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{IO}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Coinduction}\<%
+\\
+\>\AgdaKeyword{import} \AgdaModule{Data.Nat.Show} \AgdaSymbol{as} \AgdaModule{NatShow}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Environment.Arguments}\<%
+\\
+%
+\\
+\>\AgdaFunction{main} \AgdaSymbol{:} \AgdaSymbol{\_}\<%
+\\
+\>\AgdaFunction{main} \AgdaSymbol{=} \AgdaFunction{run} \AgdaFunction{\$}\<%
+\\
+\>[0]\AgdaIndent{2}{}\<[2]%
+\>[2]\AgdaCoinductiveConstructor{♯} \AgdaFunction{getArgs} \AgdaInductiveConstructor{IO.>>=} \AgdaSymbol{λ} \AgdaBound{args} \AgdaSymbol{→}\<%
+\\
+\>[0]\AgdaIndent{2}{}\<[2]%
+\>[2]\AgdaCoinductiveConstructor{♯} \AgdaFunction{[} \AgdaFunction{error} \AgdaFunction{,} \AgdaFunction{success} \AgdaFunction{]′} \AgdaSymbol{(}\AgdaFunction{parseCommand} \AgdaSymbol{(}\AgdaField{exec} \AgdaFunction{cli}\AgdaSymbol{)} \AgdaBound{args}\AgdaSymbol{)}\<%
+\\
+%
+\\
+\>[0]\AgdaIndent{2}{}\<[2]%
+\>[2]\AgdaKeyword{where}\<%
+\\
+%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{error} \AgdaSymbol{:} \AgdaPostulate{String} \AgdaSymbol{→} \AgdaSymbol{\_}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{error} \AgdaSymbol{=} \AgdaFunction{putStrLn} \AgdaFunction{∘} \AgdaFunction{String.\_++\_} \AgdaString{"*** Error: "}\<%
+\\
+%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{sumNat} \AgdaSymbol{:} \AgdaDatatype{Maybe} \AgdaSymbol{(}\AgdaDatatype{List} \AgdaDatatype{ℕ}\AgdaSymbol{)} \AgdaSymbol{→} \AgdaDatatype{ℕ}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{sumNat} \AgdaSymbol{=} \AgdaFunction{maybe} \AgdaSymbol{(}\AgdaFunction{foldr} \AgdaPrimitive{Nat.\_+\_} \AgdaNumber{0}\AgdaSymbol{)} \AgdaNumber{0}\<%
+\\
+%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{sumInt} \AgdaSymbol{:} \AgdaDatatype{Maybe} \AgdaSymbol{(}\AgdaDatatype{List} \AgdaDatatype{ℤ}\AgdaSymbol{)} \AgdaSymbol{→} \AgdaDatatype{ℤ}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{sumInt} \AgdaSymbol{=} \AgdaFunction{maybe} \AgdaSymbol{(}\AgdaFunction{foldr} \AgdaFunction{Int.\_+\_} \AgdaSymbol{(}\AgdaInductiveConstructor{+} \AgdaNumber{0}\AgdaSymbol{))} \AgdaSymbol{(}\AgdaInductiveConstructor{+} \AgdaNumber{0}\AgdaSymbol{)}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{:} \AgdaDatatype{ParsedCommand} \AgdaSymbol{(}\AgdaField{exec} \AgdaFunction{cli}\AgdaSymbol{)} \AgdaSymbol{→} \AgdaDatatype{IO} \AgdaSymbol{\_}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{[} \<[31]%
+\>[31]\AgdaSymbol{.\_} \<[38]%
+\>[38]\AgdaInductiveConstructor{∷=} \AgdaSymbol{\_} \AgdaInductiveConstructor{\&} \AgdaSymbol{\_} \AgdaInductiveConstructor{]}\AgdaSymbol{)} \<[51]%
+\>[51]\AgdaSymbol{=} \AgdaFunction{putStrLn} \AgdaString{"meh"}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{[} \AgdaSymbol{.}\AgdaString{"int"} \AgdaInductiveConstructor{[} \<[26]%
+\>[26]\AgdaInductiveConstructor{z} \AgdaInductiveConstructor{]∙} \AgdaSymbol{.}\AgdaString{"int"} \AgdaInductiveConstructor{∷=} \AgdaSymbol{\_} \AgdaInductiveConstructor{\&} \AgdaBound{vs} \AgdaInductiveConstructor{]}\AgdaSymbol{)} \AgdaSymbol{=} \AgdaFunction{putStrLn} \AgdaFunction{\$} \AgdaFunction{Int.show} \<[77]%
+\>[77]\AgdaFunction{\$} \AgdaFunction{sumInt} \AgdaBound{vs}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{[} \AgdaSymbol{.}\AgdaString{"nat"} \AgdaInductiveConstructor{[} \AgdaInductiveConstructor{s} \AgdaInductiveConstructor{z} \AgdaInductiveConstructor{]∙} \AgdaSymbol{.}\AgdaString{"nat"} \AgdaInductiveConstructor{∷=} \AgdaSymbol{\_} \AgdaInductiveConstructor{\&} \AgdaBound{vs} \AgdaInductiveConstructor{]}\AgdaSymbol{)} \AgdaSymbol{=} \AgdaFunction{putStrLn} \AgdaFunction{\$} \AgdaFunction{NatShow.show} \AgdaFunction{\$} \AgdaFunction{sumNat} \AgdaBound{vs}\<%
+\\
+%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaComment{-- empty cases}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{[} \AgdaSymbol{.}\AgdaString{"int"} \AgdaInductiveConstructor{[} \<[29]%
+\>[29]\AgdaInductiveConstructor{z} \<[33]%
+\>[33]\AgdaInductiveConstructor{]∙} \AgdaSymbol{\_} \AgdaInductiveConstructor{[} \AgdaSymbol{()} \AgdaInductiveConstructor{]∙} \AgdaSymbol{\_)}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{[} \AgdaSymbol{.}\AgdaString{"nat"} \AgdaInductiveConstructor{[} \AgdaInductiveConstructor{s} \<[29]%
+\>[29]\AgdaInductiveConstructor{z} \<[33]%
+\>[33]\AgdaInductiveConstructor{]∙} \AgdaSymbol{\_} \AgdaInductiveConstructor{[} \AgdaSymbol{()} \AgdaInductiveConstructor{]∙} \AgdaSymbol{\_)}\<%
+\\
+\>[2]\AgdaIndent{4}{}\<[4]%
+\>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{[} \AgdaSymbol{\_} \<[26]%
+\>[26]\AgdaInductiveConstructor{[} \AgdaInductiveConstructor{s} \AgdaSymbol{(}\AgdaInductiveConstructor{s} \AgdaSymbol{())} \AgdaInductiveConstructor{]∙} \AgdaSymbol{\_)}\<%
+\end{code}

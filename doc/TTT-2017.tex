@@ -1,0 +1,109 @@
+\documentclass[preprint,9pt]{sigplanconf}
+\usepackage[references]{agda}
+\usepackage[english]{babel}
+\usepackage{todonotes}
+\usepackage{catchfilebetweentags}
+\setlength\mathindent{0em}
+
+% \setmainfont{XITS}
+% \setmathfont{XITS Math}
+
+\begin{document}
+
+\conferenceinfo{TTT '17}{January 15th, 2017, Paris, France}
+\copyrightyear{2017}
+\copyrightdata{978-1-nnnn-nnnn-n/yy/mm}
+\copyrightdoi{nnnnnnn.nnnnnnn}
+
+\title{agdARGS - Declarative Command Line Interfaces}
+% \subtitle{Subtitle Text, if any}
+
+\authorinfo{Guillaume Allais}
+           {gallais@cs.ru.nl}
+           {Radboud University Nijmegen}
+\maketitle
+
+\section{Introduction}
+
+If functional programmers using statically typed languages (broadly)
+in the Hindley-Milner tradition have taken to boasting 
+``If it typechecks, ship it!'', the shared sentiment amongst the ones
+using dependently typed languages seemed for a long while to be closer
+to ``Once it typechecks, shelve it!''.
+
+However, there has been some outliers since the very beginning
+not only using Type Theory as a theorem proving tool but also
+demonstrating the practical benefits dependent types bring to
+the programmers' table. The nowadays classic definition of
+\texttt{printf} in a type-safe manner~\cite{augustsson1998cayenne}
+is a prime example. Other notable contributions include
+Danielsson's total parser combinators~(\citeyear{danielsson2010total}).
+
+
+\todo{Aaron Stump?}
+\todo{Guillaume Claret}
+
+Edwin Brady's proposition to focus on ``Pacman completeness''\todo{define?}
+rather than mere ``Turing completeness'' is part of that effort.
+
+
+When writing an application in Type Theory, one wants to focus one's
+attention on the core algorithms. The parts that can be fully certified,
+dealing with sanitised data enriched with all sorts of exciting invariants.
+The wrapper code is not necessarily terribly exciting.
+
+\todo{expand}Tanter and Tabareau have ~(\citeyear{tanter2015gradual}).
+
+Command line interfaces are another example of these layers of
+wrappers around the core algorithm that get mistreated. We offer
+a solution: a dependently typed DSL for defining declaratively
+hierarchical command line interfaces.
+
+\section{Hierarchical Command Line Interfaces}
+
+A hierarchical command line interface is defined by a number
+of components:
+
+\begin{itemize}
+\item A \textbf{description} explaining the command's purpose. It has no
+influence on the implementation of the interface but is useful
+documentation for the end-user.
+
+\item A list of \textbf{subcommands}. They are themselves fully-fledged
+commands the user gets access to by mentioning a keyword. This
+makes it possible to give the interface a \emph{hierarchical}
+structure. E.g. \texttt{git-pull} can be accessed from the main
+\texttt{git} interface with the keyword \texttt{pull}.
+
+\item A list of \textbf{modifiers} for the current command. They can
+be either \textbf{flags} one may set or \textbf{options} taking
+a parameter.
+
+\item Finally, strings which are neither subcommand keywords nor
+modifiers are considered \textbf{arguments} of the command.
+\end{itemize}
+
+With our library, the programmer can simply get an interface by
+specifying this structure. For instance, a command similar to
+UNIX's \texttt{wc} can be declared this way:
+
+\begin{figure}[ht]
+\ExecuteMetaData[WordCount.tex]{wordcount}
+\caption{The \texttt{wc} command's interface}
+\end{figure}
+
+\begin{figure}[ht]
+\ExecuteMetaData[Sum.tex]{sum}
+\end{figure}
+
+\section{Command}
+
+\cite{mcbride2014keep}
+
+\section{Parsing}
+\section{Usage}
+
+\bibliographystyle{abbrvnat}
+\bibliography{TTT-2017}
+
+\end{document}
