@@ -1,5 +1,5 @@
 \begin{code}%
-\>\AgdaKeyword{module} \AgdaModule{agdARGS.Examples.WordCount} \AgdaKeyword{where}\<%
+\>\AgdaKeyword{module} \AgdaModule{agdARGS.Examples.Doc.WordCount} \AgdaKeyword{where}\<%
 \\
 %
 \\
@@ -9,9 +9,13 @@
 \\
 \>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{IO}\<%
 \\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{IO.Primitive} \AgdaKeyword{using} \AgdaSymbol{()} \AgdaKeyword{renaming} \AgdaSymbol{(}\AgdaPostulate{IO} \AgdaSymbol{to} \AgdaPostulate{PrimIO}\AgdaSymbol{)}\<%
+\\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Unit}\<%
+\\
 \>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Bool}\<%
 \\
-\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Nat} \AgdaSymbol{as} \AgdaModule{Nat}\<%
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Nat} \AgdaSymbol{as} \AgdaModule{Nat} \AgdaKeyword{hiding} \AgdaSymbol{(}\AgdaInductiveConstructor{zero}\AgdaSymbol{)}\<%
 \\
 \>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{Data.Nat.Show} \AgdaSymbol{as} \AgdaModule{NatShow}\<%
 \\
@@ -43,6 +47,8 @@
 \\
 \>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.CLI.Parser}\<%
 \\
+\>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.CLI.Usual} \AgdaKeyword{hiding} \AgdaSymbol{(}\AgdaFunction{withCLI}\AgdaSymbol{)}\<%
+\\
 \>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.Modifiers}\<%
 \\
 \>\AgdaKeyword{open} \AgdaKeyword{import} \AgdaModule{agdARGS.System.Console.Options.Usual}\<%
@@ -53,10 +59,25 @@
 \\
 %
 \\
-\>\AgdaFunction{filePath} \AgdaSymbol{:} \AgdaPostulate{String} \AgdaSymbol{→} \AgdaFunction{Error} \AgdaPostulate{String} \<[33]%
-\>[33]\<%
+%
 \\
-\>\AgdaFunction{filePath} \AgdaSymbol{=} \AgdaInductiveConstructor{inj₂}\<%
+%
+\\
+\>\AgdaFunction{ParsedCLI} \AgdaSymbol{:} \AgdaRecord{CLI} \AgdaPrimitive{zero} \AgdaSymbol{→} \AgdaPrimitiveType{Set₁}\<%
+\\
+\>\AgdaFunction{ParsedCLI} \AgdaSymbol{=} \AgdaFunction{ParsedInterface}\<%
+\\
+%
+\\
+\>\<%
+\end{code}
+%<*withCLI>
+\begin{code}%
+\>\AgdaFunction{withCLI} \AgdaSymbol{:} \AgdaSymbol{∀} \AgdaBound{c} \AgdaSymbol{(}\AgdaBound{k} \AgdaSymbol{:} \AgdaFunction{ParsedCLI} \AgdaBound{c} \AgdaSymbol{→} \AgdaDatatype{IO} \AgdaRecord{⊤}\AgdaSymbol{)} \AgdaSymbol{→} \AgdaDatatype{IO} \AgdaRecord{⊤}\<%
+\end{code}
+%</withCLI>
+\begin{code}%
+\>\AgdaFunction{withCLI} \AgdaBound{c} \AgdaBound{k} \AgdaSymbol{=} \AgdaCoinductiveConstructor{♯} \AgdaFunction{getArgs} \AgdaInductiveConstructor{IO.>>=} \AgdaSymbol{λ} \AgdaBound{args} \AgdaSymbol{→} \AgdaCoinductiveConstructor{♯} \AgdaFunction{[} \AgdaFunction{error} \AgdaFunction{,} \AgdaBound{k} \AgdaFunction{]′} \AgdaSymbol{(}\AgdaFunction{parseInterface} \AgdaBound{c} \AgdaBound{args}\AgdaSymbol{)}\<%
 \\
 %
 \\
@@ -146,8 +167,6 @@
 \\
 %
 \\
-\>\AgdaFunction{FilePath} \AgdaSymbol{=} \AgdaPostulate{String}\<%
-\\
 %
 \\
 \>\AgdaFunction{showCounts} \AgdaSymbol{:} \AgdaFunction{ParsedModifiers} \AgdaSymbol{(}\AgdaField{proj₂} \AgdaSymbol{(}\AgdaField{modifiers} \AgdaFunction{WordCount}\AgdaSymbol{))} \AgdaSymbol{→}\<%
@@ -164,10 +183,10 @@
 \>[2]\AgdaComment{-- or none at all are set.}\<%
 \\
 \>[0]\AgdaIndent{2}{}\<[2]%
-\>[2]\AgdaKeyword{let} \AgdaBound{keepLines} \AgdaSymbol{=} \AgdaFunction{is-just} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-l"}\AgdaSymbol{)} \AgdaFunction{∨} \AgdaFunction{is-nothing} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-w"}\AgdaSymbol{)}\<%
+\>[2]\AgdaKeyword{let} \AgdaBound{keepLines} \AgdaSymbol{=} \AgdaField{lower} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-l"}\AgdaSymbol{)} \AgdaFunction{∨} \AgdaFunction{not} \AgdaSymbol{(}\AgdaField{lower} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-w"}\AgdaSymbol{))}\<%
 \\
 \>[2]\AgdaIndent{6}{}\<[6]%
-\>[6]\AgdaBound{keepWords} \AgdaSymbol{=} \AgdaFunction{is-just} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-w"}\AgdaSymbol{)} \AgdaFunction{∨} \AgdaFunction{is-nothing} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-l"}\AgdaSymbol{)}\<%
+\>[6]\AgdaBound{keepWords} \AgdaSymbol{=} \AgdaField{lower} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-w"}\AgdaSymbol{)} \AgdaFunction{∨} \AgdaFunction{not} \AgdaSymbol{(}\AgdaField{lower} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"-l"}\AgdaSymbol{))}\<%
 \\
 \>[2]\AgdaIndent{6}{}\<[6]%
 \>[6]\AgdaBound{total} \<[16]%
@@ -269,26 +288,12 @@
 \\
 \>\AgdaFunction{main} \AgdaSymbol{:} \AgdaSymbol{\_}\<%
 \\
-\>\AgdaFunction{main} \AgdaSymbol{=} \AgdaFunction{run} \AgdaFunction{\$}\<%
-\\
-\>[0]\AgdaIndent{2}{}\<[2]%
-\>[2]\AgdaCoinductiveConstructor{♯} \AgdaFunction{getArgs} \AgdaInductiveConstructor{>>=} \AgdaSymbol{λ} \AgdaBound{args} \AgdaSymbol{→}\<%
-\\
-\>[0]\AgdaIndent{2}{}\<[2]%
-\>[2]\AgdaCoinductiveConstructor{♯} \AgdaFunction{[} \AgdaFunction{error} \AgdaFunction{,} \AgdaFunction{success} \AgdaFunction{]′} \AgdaSymbol{(}\AgdaFunction{parseCommand} \AgdaSymbol{(}\AgdaField{exec} \AgdaFunction{cli}\AgdaSymbol{)} \AgdaBound{args}\AgdaSymbol{)}\<%
+\>\AgdaFunction{main} \AgdaSymbol{=} \AgdaFunction{withCLI} \AgdaFunction{cli} \AgdaFunction{success}\<%
 \\
 %
 \\
 \>[0]\AgdaIndent{2}{}\<[2]%
 \>[2]\AgdaKeyword{where}\<%
-\\
-%
-\\
-\>[2]\AgdaIndent{4}{}\<[4]%
-\>[4]\AgdaFunction{error} \AgdaSymbol{:} \AgdaPostulate{String} \AgdaSymbol{→} \AgdaDatatype{IO} \AgdaSymbol{\_}\<%
-\\
-\>[2]\AgdaIndent{4}{}\<[4]%
-\>[4]\AgdaFunction{error} \AgdaSymbol{=} \AgdaFunction{putStrLn} \AgdaFunction{∘} \AgdaSymbol{(}\AgdaFunction{String.\_++\_} \AgdaString{"*** Error: "}\AgdaSymbol{)}\<%
 \\
 %
 \\
@@ -313,11 +318,11 @@
 \>[4]\AgdaFunction{success} \AgdaSymbol{(}\AgdaInductiveConstructor{theCommand} \AgdaBound{mods} \AgdaBound{args}\AgdaSymbol{)} \AgdaSymbol{=}\<%
 \\
 \>[4]\AgdaIndent{11}{}\<[11]%
-\>[11]\AgdaFunction{if} \AgdaFunction{is-just} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"--version"}\AgdaSymbol{)} \AgdaFunction{then} \AgdaFunction{putStrLn} \AgdaString{"WordCount: version 0.1"}\<%
+\>[11]\AgdaFunction{if} \AgdaField{lower} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"--version"}\AgdaSymbol{)} \AgdaFunction{then} \AgdaFunction{putStrLn} \AgdaString{"WordCount: version 0.1"}\<%
 \\
 \>[0]\AgdaIndent{6}{}\<[6]%
-\>[6]\AgdaFunction{else} \AgdaFunction{if} \AgdaFunction{is-just} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"--help"}\AgdaSymbol{)} \<[43]%
-\>[43]\AgdaFunction{then} \AgdaFunction{putStrLn} \AgdaString{"TODO: usage"}\<%
+\>[6]\AgdaFunction{else} \AgdaFunction{if} \AgdaField{lower} \AgdaSymbol{(}\AgdaBound{mods} \AgdaFunction{‼} \AgdaString{"--help"}\AgdaSymbol{)} \<[41]%
+\>[41]\AgdaFunction{then} \AgdaFunction{putStrLn} \AgdaString{"TODO: usage"}\<%
 \\
 \>[0]\AgdaIndent{6}{}\<[6]%
 \>[6]\AgdaFunction{else} \AgdaFunction{maybe} \AgdaSymbol{(}\AgdaFunction{treatFiles} \AgdaBound{mods}\AgdaSymbol{)} \AgdaSymbol{(}\AgdaFunction{error} \AgdaString{"No file provided"}\AgdaSymbol{)} \AgdaBound{args}\<%

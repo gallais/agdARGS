@@ -2,6 +2,7 @@
 \usepackage[references]{agda}
 \usepackage[english]{babel}
 \usepackage{todonotes}
+\usepackage{alltt, enumitem, color, url}
 \usepackage{catchfilebetweentags}
 \setlength\mathindent{0em}
 
@@ -10,12 +11,19 @@
 
 \begin{document}
 
+\newcommand{\AB}[1]{\AgdaBound{#1}}
+\newcommand{\AD}[1]{\AgdaDatatype{#1}}
+\newcommand{\AF}[1]{\AgdaFunction{#1}}
+\newcommand{\AS}[1]{\AgdaSymbol{#1}}
+
+\newcommand{\command}[1]{\colorbox{lightgray}{\texttt{#1}}}
+
 \conferenceinfo{TTT '17}{January 15th, 2017, Paris, France}
 \copyrightyear{2017}
 \copyrightdata{978-1-nnnn-nnnn-n/yy/mm}
 \copyrightdoi{nnnnnnn.nnnnnnn}
 
-\title{agdARGS - Declarative Command Line Interfaces}
+\title{agdARGS - Declarative Hierarchical Command Line Interfaces}
 % \subtitle{Subtitle Text, if any}
 
 \authorinfo{Guillaume Allais}
@@ -31,38 +39,35 @@ in the Hindley-Milner tradition have taken to boasting
 using dependently typed languages seemed for a long while to be closer
 to ``Once it typechecks, shelve it!''.
 
-However, there has been some outliers since the very beginning
-not only using Type Theory as a theorem proving tool but also
-demonstrating the practical benefits dependent types bring to
-the programmers' table. The nowadays classic definition of
-\texttt{printf} in a type-safe manner~\cite{augustsson1998cayenne}
-is a prime example. Other notable contributions include
-Danielsson's total parser combinators~(\citeyear{danielsson2010total}).
+Over the years, there has been some outliers not only using Type Theory
+as a theorem proving tool but also demonstrating the practical benefits
+dependent types bring to the programmers' table. The nowadays classic
+definition of \texttt{printf} in a type-safe
+manner~\cite{augustsson1998cayenne} is a prime example. Other notable
+contributions in that vein include for instance parser DSLs and
+generators~\cite{danielsson2010total,stump2016book},
+and interactive systems~\cite{brady2014resource,claret2015mechanical}.
 
+When writing an application in Type Theory, it is reasonable to expect
+the programmer to want to focus her attention on the core algorithms
+i.e. the parts that can be fully certified, dealing with sanitised data
+enriched with all sorts of fancy invariants. The wrapper code is not
+necessarily terribly exciting in comparison and tends to be treated
+more as an afterthought.
+Tanter and Tabareau~(\citeyear{tanter2015gradual}) have developed a
+nice library to facilitate the transition from weakly typed to strongly
+typed data whilst maintaining type safety. This potentially removes one
+layer of boilerplate.
 
-\todo{Aaron Stump?}
-\todo{Guillaume Claret}
-
-Edwin Brady's proposition to focus on ``Pacman completeness''\todo{define?}
-rather than mere ``Turing completeness'' is part of that effort.
-
-
-When writing an application in Type Theory, one wants to focus one's
-attention on the core algorithms. The parts that can be fully certified,
-dealing with sanitised data enriched with all sorts of exciting invariants.
-The wrapper code is not necessarily terribly exciting.
-
-\todo{expand}Tanter and Tabareau have ~(\citeyear{tanter2015gradual}).
-
-Command line interfaces are another example of these layers of
-wrappers around the core algorithm that get mistreated. We offer
-a solution: a dependently typed DSL for defining declaratively
-hierarchical command line interfaces.
+Command line interfaces are another one of these layers of wrapper
+code. We offer a solution: a dependently typed DSL for defining
+declaratively hierarchical command line interfaces available at
+\url{https://github.com/gallais/agdARGS}.
 
 \section{Hierarchical Command Line Interfaces}
+\label{hcli}
 
-A hierarchical command line interface is defined by a number
-of components:
+A hierarchical command line interface is defined by:
 
 \begin{itemize}
 \item A \textbf{description} explaining the command's purpose. It has no
@@ -72,8 +77,9 @@ documentation for the end-user.
 \item A list of \textbf{subcommands}. They are themselves fully-fledged
 commands the user gets access to by mentioning a keyword. This
 makes it possible to give the interface a \emph{hierarchical}
-structure. E.g. \texttt{git-pull} can be accessed from the main
-\texttt{git} interface with the keyword \texttt{pull}.
+structure. E.g. \command{git pull} accesses the subcommand
+\texttt{git-pull} from the main \texttt{git} interface with the
+keyword \texttt{pull}.
 
 \item A list of \textbf{modifiers} for the current command. They can
 be either \textbf{flags} one may set or \textbf{options} taking
@@ -84,24 +90,177 @@ modifiers are considered \textbf{arguments} of the command.
 \end{itemize}
 
 With our library, the programmer can simply get an interface by
-specifying this structure. For instance, a command similar to
-UNIX's \texttt{wc} can be declared this way:
+specifying this structure. For instance\footnote{Unfortunately
+we lack the space necessary to give an example of an interface
+with subcommands}, a command similar to UNIX's \texttt{wc} can
+be declared this way:
 
 \begin{figure}[ht]
 \ExecuteMetaData[WordCount.tex]{wordcount}
-\caption{The \texttt{wc} command's interface}
+\caption{The \texttt{wc} command's interface}\label{wc-cli}
 \end{figure}
+
+\section{Implementation Details}
+
+If the general structure of a command is set in stone, it cannot
+be the case for its subcommands and modifiers: they will vary
+from application to application in number and nature. This means
+that we need to design a first class representation of (extensible)
+records amenable to generic programming to deal with them.
+
+\subsection{Extensible Records}
+
+A record type is characterised by two things: a list of distinct
+field names and a type associated to each one of these fields.
+Given a decidable \emph{strict} order on the type of names, we can
+make use of McBride's design principles~(\citeyear{mcbride2014keep})
+to define a structure of lists sorted in strictly increasing order
+and thus only containing distinct elements. These will be our lists
+of names. The types associated to each one of these field names can
+be collected in a right-nested tuple computed by recursion on the list.
+A record value is then a right-nested tuple of values of the corresponding
+types.
+
+Because there are so many computations at the type level, the
+unification machinery can get stuck on meta-variables introduced
+by implicit arguments. It is crucial for the usability of the
+library defining extensible records that some of these notions
+(the fields' types and the record value itself) are wrapped in
+an Agda record to guide the type inference.
+
+The combinators \AF{\_∷=\_⟨\_} and \AF{⟨⟩} one can see in
+Figure~\ref{wc-cli} are also crucial to the library's usability:
+they make it possible to define the extensible record field by
+field without having to pay attention to the underlying representation
+where all the invariants are enforced.
+
+
+\subsection{Commands as Rose Trees}
+
+The structure described in Section \ref{hcli} is reminiscent of a
+rose tree and it is indeed implemented as one. It should now be
+folklore that rose trees benefit a lot from being defined as sized
+types~\cite{abelminiagda}. It allows recursive traversals to weaponize
+higher-order functions without having to spend a lot of efforts
+appeasing the termination checker. An instance of such a higher order
+function we use to great effect is the fold over an extensible record
+of subcommands.
+
+We made Size an implicit index so that it does not add any extra
+overhead from the programmer's point of view in places where it
+does not matter.
+
+\section{Generic Programming over Interfaces}
+
+The point of having a first order representation of Interfaces
+is, just like for any deeply-embedded DSL~\cite{hudak1996building},
+to be able to write generic program against this representation.
+
+\subsection{Parsing}
+
+The most important use case is to harness the Interface declaration
+to make sense of the list of strings\footnote{These are usually
+referred to as ``command line arguments'' e.g. in the specification
+of \texttt{getArgs} in the Haskell 98 report's ``System Functions''
+section. We refrain from using that expression to avoid confusion
+with our Interface's notion of arguments} passed to the executable
+called from the command line. The expected result of a successful
+parse is a path down the hierarchical structure of the interface
+selecting a subcommand together with a collection of recognized
+modifiers and arguments specific to that subcommand. Dependent types
+allow us to make this requirement explicit by indexing the path
+over the command it corresponds to. We write \AF{ParsedCLI} \AB{c}
+for the type of successful parses associated to the interface \AB{c}.
+This parsing process can be decomposed in three successive phases:
+
+\begin{enumerate}[wide, labelwidth=!, labelindent=0pt]
+\item The \textbf{subcommand selection} phase goes down the hierarchical
+interface picking subcommands based on the keywords provided by the
+user. As soon as a modifier or an argument for the current command
+in focus is found, the second phase starts.
+
+\item The \textbf{modifier and arguments collection} phase now has
+settled for a given subcommand and tries to parse each new string as
+either one of its modifiers or, if that doesn't succeed, an argument.
+
+\item At any point the string ``-{}-'' can make the parser switch to the
+\textbf{argument collection} phase. It interprets each subsequent
+string as an argument to the command in focus. It is useful when
+arguments may look like modifiers e.g. \command{ls -l -{}- -l} lists
+(\texttt{ls}) in a long listing format (\texttt{-l}) the information
+about the file ``-l'' (\texttt{-{}- -l}).
+\end{enumerate}
+
+We provide the user with a combinator readily putting various
+pieces together that should fit most use cases. Its takes an interface,
+a continuation for a successful parse and returns an \texttt{IO}
+computation:
+\ExecuteMetaData[WordCount.tex]{withCLI}
+Internally, \AF{withCLI} performs a call to Haskell's \texttt{getArgs},
+attempts to parse the list of strings it got back, and either prints
+the error to \texttt{stdout} if the parse failed or calls the
+continuation otherwise.
+
+It is currently very simple but fits our need. We can imagine
+more elaborate variations on it. We could for instance ``patch''
+on the fly the provided interface so that it supports all the
+common flags for requesting help (e.g. \texttt{-h}, \texttt{-{}-help},
+\texttt{-?}, etc.) and responds to them by displaying appropriate
+usage information.
+
+\subsection{Usage Information}
+
+It is indeed possible to exploit the available knowledge about
+the interface's hierarchical structure, the subcommands' names
+and their associated modifiers to generically produce usage
+information for the end-users' consumption. Our \AF{usage}
+function traverses the interface tree in a depth-first manner:
+it starts by recursively displaying all the subcommands (if any)
+at an increased indentation level and then lists the modifiers
+for the current command. Ran on the \texttt{wc}-like interface
+described in Figure~\ref{wc-cli}, it yields the output in
+Figure~\ref{wc-usage}.
 
 \begin{figure}[ht]
-\ExecuteMetaData[Sum.tex]{sum}
+\begin{alltt}
+WordCount  Print each file's counts
+  --help     Display help
+  --version  Version Number
+  -l         Newline count
+  -w         Word count
+\end{alltt}
+\caption{Usage Information for the Interface in Fig. \ref{wc-cli}}
+\label{wc-usage}
 \end{figure}
 
-\section{Command}
+\section{Current Limitations and Future Work}
 
-\cite{mcbride2014keep}
+Writing the continuation passed to \AF{withCLI} can be a bit
+verbose when dealing with deeply nested interfaces. It ought
+to be possible to define combinators that make it easier to
+combine together small, self-contained subcommands each one
+handling its own branch of the subcommands tree.
 
-\section{Parsing}
-\section{Usage}
+It is rather common for interfaces to allow the grouping of
+flags which are one character long into compound flags (e.g.
+\command{tar -xz} is understood as \command{tar -x -z})
+or to use the remainder of a one character long option as
+its parameter (e.g. \command{tar -xz -ffi} is understood as
+\command{tar -xz -f fi}). One can even mix the two e.g.
+\command{tar -xzffi}. The current parser does not handle
+these shortcuts.
+
+The usage information is generated in a rather crude manner
+by putting raw strings together. A well-structured intermediate
+format describing in a simple manner the dependencies between
+blocks of text would be an ideal candidate for a refactoring.
+Wadler's Prettier Printer~(\citeyear{wadler2003prettier}) is a
+possible candidate.
+
+Once the generation of usage information is well structured,
+it would be interesting to be able to generate proper \texttt{man}
+pages. An interesting problem to solve towards that goal is the
+generation of compact yet informative examples of valid usages.
 
 \bibliographystyle{abbrvnat}
 \bibliography{TTT-2017}
