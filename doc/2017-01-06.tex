@@ -1,0 +1,287 @@
+\documentclass[dvipsnames]{beamer}
+\usetheme{ru}
+
+\usepackage{minted}
+\usepackage{mathspec}
+\usepackage{xcolor}
+
+\usepackage{tikz}
+\usetikzlibrary{calc,shapes.multipart,chains,arrows}
+
+\setmainfont[Ligatures=TeX]{XITS}
+\setmathfont{XITS Math}
+
+\title{agdARGS}
+\subtitle{Declarative Hierarchical Command Line Interfaces}
+\author[G. Allais]{Guillaume Allais}
+\institute[Radboud]{Radboud University}
+\date[NL FP Dag 17]{Dutch Functional Programming Day 2017}
+
+\begin{document}
+
+\begin{frame}
+ \maketitle
+\end{frame}
+
+\section{Motivation: When it typechecks...}
+
+\begin{frame}{Ship it? More like shelve it! :(}
+  Core algorithm
+    \begin{itemize}
+      \item Data structures with strong invariants
+      \item Fully certified
+    \end{itemize}
+  + Boilerplate
+    \begin{itemize}
+      \item Validation of unsafe data
+      \item (Command Line / Graphical) Interface
+    \end{itemize}
+  = Executable
+\end{frame}
+
+\begin{frame}{Case study: a minimal \texttt{grep}}
+No access to the program's command-line arguments
+  \begin{itemize}
+    \item Add postulate + \texttt{COMPILED} pragma for \texttt{getArgs}
+    \item Wrap in the \texttt{IO} monad
+  \end{itemize}
+Ad-hoc parsing function
+\end{frame}
+
+\begin{frame}[fragile]{"Hand-crafted" solution}
+
+Now that we have access to the arguments, we just have to make sense
+of them. We use a type of options:
+
+\begin{minted}{haskell}
+record grepOptions : Set where
+  field
+    -v     : Bool            -- invert match
+    -i     : Bool            -- ignore case
+    regexp : Maybe String    -- regular expression
+    files  : List FilePath   -- list of files to process
+\end{minted}
+
+And "hand-craft" a function populating it:
+\end{frame}
+
+\begin{frame}[fragile]
+\begin{minted}{haskell}
+parseOptions : List String -> grepOptions
+parseOptions args =
+  record result { files = reverse (files result) }
+  where
+    cons : grepOptions -> String -> grepOptions
+    cons opt "-v" = record opt { -v = true }
+    cons opt "-i" = record opt { -i = true }
+    cons opt str  =
+      if is-nothing (regexp opt)
+      then record opt { regexp = just str }
+      else record opt { files  = str :: files opt }
+
+    result : grepOptions
+    result = foldl cons defaultGrepOptions args
+\end{minted}
+\end{frame}
+
+\section{What is the specification of a CLI?}
+\begin{frame}{Types: What is a command-line interface?}
+
+What is a Command-Line Interface?
+  \begin{itemize}
+    \item A \textbf{description}
+    \item A list of \textbf{subcommands}
+    \item A list of \textbf{modifiers} (\textbf{flags} \& \textbf{options})
+    \item Default \textbf{arguments}
+  \end{itemize}
+
+What should we get from declaring one?
+  \begin{itemize}
+    \item The corresponding parser
+    \item Usage information
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Types: Example of a CLI}
+\begin{minted}{haskell}
+Grep = record
+  { description = "Print lines matching a regexp"
+  ; subcommands = noSubCommands
+  ; arguments   = lotsOf filePath
+  ; modifiers   = 
+    , "-v" ::= flag "Invert match"
+    < "-i" ::= flag "Ignore case"
+    < "-e" ::= option "Regexp" regexp
+    < <>
+  }
+\end{minted}
+\end{frame}
+
+\section{Internal representation}
+\begin{frame}{Extensible records}
+ Represent field names as sorted lists
+  \begin{itemize}
+    \item guaranteed uniqueness of commands / modifiers
+    \item easy to lookup values
+    \item easy to extend
+    \item first class citizens (generic programming possible!)
+  \end{itemize}
+ Associate a type to each field name
+
+ Generate record types by recursion on the list of field names
+
+ Remark: Drive type inference
+\end{frame}
+
+\subsection{Types - Keep your neighbours in order}
+
+\begin{frame}{The type of extensible records}
+  McBride to the rescue: "How to keep your neighbours in order" tells
+  us how to build in the invariant stating that a tree's leaves are
+  sorted.
+
+  In the special case of linked lists, using a \emph{strict} total
+  order, we move from:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[list/.style={rectangle split, rectangle split parts=2,
+    draw, rectangle split horizontal}, >=stealth, start chain]
+
+  \node[list,on chain] (A) {12};
+  \node[list,on chain] (B) {99};
+  \node[list,on chain] (C) {128};
+  \node[on chain,draw, inner sep=6pt] (D) {};
+  \draw (D.north west) -- (D.south east);
+  \draw (D.north east) -- (D.south west);
+  \draw[*->] let \p1 = (A.two), \p2 = (A.center) in (\x1,\y2) -- (B);
+  \draw[*->] let \p1 = (B.two), \p2 = (B.center) in (\x1,\y2) -- (C);
+  \draw[*->] let \p1 = (C.two), \p2 = (C.center) in (\x1,\y2) -- (D);
+\end{tikzpicture}
+\end{figure}
+
+  To the proven ordered:
+
+\begin{figure}[t]
+\begin{tikzpicture}[list/.style={rectangle split, rectangle split parts=2,
+    draw, rectangle split horizontal}, >=stealth, start chain]
+
+  \node[list,on chain] (A) {{\color{red}-$\infty$} < 12};
+  \node[list,on chain] (B) {{\color{gray}12} < 99};
+  \node[list,on chain] (C) {{\color{gray}99} < 128};
+  \node[on chain,draw] (D) {{\color{gray}128} < {\color{red}+$\infty$}};
+  \draw[*->] let \p1 = (A.two), \p2 = (A.center) in (\x1,\y2) -- (B);
+  \draw[*->] let \p1 = (B.two), \p2 = (B.center) in (\x1,\y2) -- (C);
+  \draw[*->] let \p1 = (C.two), \p2 = (C.center) in (\x1,\y2) -- (D);
+\end{tikzpicture}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\end{frame}
+
+\begin{frame}[fragile]{Key ideas}
+
+  Extend any ordered set with +/-infinity:
+  \begin{minted}{haskell}
+  data [_] (A : Set) : Set where
+    -infty :            [ A ]
+    emb_   : (a : A) -> [ A ]
+    +infty :            [ A ]
+  \end{minted}
+
+  Define a type of ordered lists:
+  \begin{minted}{haskell}
+  data USL' (lb ub : [ A ]) : Set where
+    []     : lb < ub -> USL' lb ub
+    _,_::_ : hd -> lb < emb hd -> USL' (emb hd) ub ->
+             USL' lb ub
+  \end{minted}
+
+  Top level type: relax the bounds as much as possible!
+  \begin{minted}{haskell}
+  type USL A = USL' (-infty : [ A ]) +infty
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{CLI}
+
+\begin{minted}{haskell}
+data Modifier name where
+  mkFlag    : Record _ Flag   -> Modifier name
+  mkOption  : Record _ Option -> Modifier name
+
+record Command name : Set where
+  inductive; constructor mkCommand
+  field
+    description : String
+    subcommands : names ** Record names Command
+    modifiers   : names ** Record names Modifier
+    arguments   : Arguments
+\end{minted}
+\end{frame}
+
+\section{Design a nice interface}
+\begin{frame}[fragile]{We can \textbf{run} an awful lot at \textbf{compile time}}
+
+  Fully-explicit, invariant-heavy structures internally
+
+  vs. Decidability on concrete instances externally (smart constructors)
+
+  Remember:
+  \begin{minted}{haskell}
+    , "-v" ::= flag "Invert match"
+    < "-i" ::= flag "Ignore case"
+    < "-e" ::= option "Regexp" regexp
+    < <>
+  \end{minted}
+\end{frame}
+
+\section{Generic Programming over Interfaces}
+
+\begin{frame}[fragile]{Parsing}
+  Parsing is decomposed in 3 phases
+
+  \begin{itemize}
+    \item subcommand selection
+    \item modifier and arguments collection
+    \item argument collection (triggered by ``-{}-'')
+  \end{itemize}
+
+  And the returned result is \emph{guaranteed} to respect the CLI:
+
+  \begin{minted}{haskell}
+parseCLI : (c : CLI) -> List String -> Error (ParsedCLI c)
+withCLI  : (c : CLI) (k : ParsedCLI c -> IO a) -> IO a
+  \end{minted}
+\end{frame}
+
+\begin{frame}[fragile]{Usage information}
+We know a lot about the structure of the interface. Let's use it!
+\begin{minted}{haskell}
+usage : CLI -> String
+\end{minted}
+
+e.g.
+
+\begin{minted}{bash}
+grep       Print lines matching a regexp
+  -e         Regexp
+  -i         Ignore case
+  -v         Invert match
+\end{minted}
+\end{frame}
+
+\section{Conclusion}
+\begin{frame}[fragile]{Future Work}
+  \begin{itemize}
+    \item Validation DSL (cf. Jon Sterling's Vinyl)
+    \item Syntactic sugar for writing the continuation
+          \mintinline{haskell}{(k : ParsedCLI c -> IO a)}
+    \item Compound flags
+    \item Other types of documentation (e.g. man pages)
+    \item More parsers for base types
+  \end{itemize}
+\end{frame}
+\end{document}
