@@ -62,8 +62,8 @@ showCounts : ParsedModifiers (proj₂ (modifiers WordCount)) →
 showCounts mods xs =
   -- Lines (resp. Words) are counted if the -l (resp. -w) flag is set
   -- or none at all are set.
-  let keepLines = is-just (mods ‼ "-l") ∨ is-nothing (mods ‼ "-w")
-      keepWords = is-just (mods ‼ "-w") ∨ is-nothing (mods ‼ "-l")
+  let keepLines = lower (mods ‼ "-l") ∨ not (lower (mods ‼ "-w"))
+      keepWords = lower (mods ‼ "-w") ∨ not (lower (mods ‼ "-l"))
       total     = List.foldr (_∙_ ∘ proj₂) count0 xs
       xs        = xs List.∷ʳ ("Total" , total)
   in Table.show $ showCol true      "FilePath" proj₁                             xs
@@ -105,7 +105,7 @@ main = withCLI cli success where
 
   success : ParsedInterface cli → IO _
   success (theCommand mods args) =
-         if is-just (mods ‼ "--version") then putStrLn "WordCount: version 0.1"
-    else if is-just (mods ‼ "--help")    then putStrLn (usage cli)
+         if lower (mods ‼ "--version") then putStrLn "WordCount: version 0.1"
+    else if lower (mods ‼ "--help")    then putStrLn (usage cli)
     else maybe (treatFiles mods) (error "No file provided") args
   success (subCommand () _)

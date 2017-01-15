@@ -3,6 +3,7 @@ module agdARGS.System.Console.CLI where
 open import Level
 open import Size
 open import Data.Unit
+open import Data.Bool
 open import Data.Empty
 open import Data.Product
 open import Data.String
@@ -115,14 +116,16 @@ parseArguments p str dft = foldl (cons p) (inj₂ dft) str
     ... | ALot m | parser = parser str >>= λ w → Error.return (just (v ∙ w))
       where open RawMagma m
 
-[dummy] : {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub) {fs : [Fields] ℓ args} →
-          [Record] args ([ Maybe [ fs ]])
-[dummy] (_ ■)             = lift tt
-[dummy] (_ UU., _ ∷ args) = nothing , [dummy] args
+[dummy] : {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub)
+          (mods : Record args (tabulate (λ {s} _ → Modifier ℓ s))) →
+          [Record] args (fields $ Type $ RU.map (const ParsedModifier) mods)
+[dummy] (_ ■)             m                   = lift tt
+[dummy] (_ UU., _ ∷ args) (mkRecord (mkFlag _   , ms)) = lift false , [dummy] args (mkRecord ms)
+[dummy] (_ UU., _ ∷ args) (mkRecord (mkOption _ , ms)) = nothing    , [dummy] args (mkRecord ms)
 
-dummy : {ℓ : Level} {lb ub : _} {args : UniqueSortedList lb ub} {fs : Fields ℓ args} →
-        Record args (Maybe RU.[ fs ])
-dummy = mkRecord $ [dummy] _
+dummy : ∀ {ℓ lb ub} {args : UniqueSortedList lb ub} {mods : Record args (toFields ℓ)} →
+        Record args (Type $ RU.map (const ParsedModifier) mods)
+dummy = mkRecord $ [dummy] _ _
 
 open import agdARGS.Relation.Nullary
 open import agdARGS.Data.UniqueSortedList.Usual
@@ -131,8 +134,8 @@ parseModifier : ∀ {ℓ s} (c : Command ℓ s) {x : String} (recyxs recxs : Err
                 → x ∈ proj₁ (modifiers c) → Error $ ParsedCommand c
 parseModifier (mkCommand descr (subs , commands cs) mods args) {x} recyxs recxs pr = 
   (case (project′ pr (proj₂ $ mods)) return (λ m → Error (ParsedModifier m)) of λ
-        { (mkFlag f)   → inj₂ $ lift tt
-        ; (mkOption o) → proj₂ (`project "arguments" o) x
+        { (mkFlag f)   → Error.return $ lift true
+        ; (mkOption o) → just <$> proj₂ (`project "arguments" o) x
         })
   >>= λ p → recyxs >>= λ rec →
       case rec of λ

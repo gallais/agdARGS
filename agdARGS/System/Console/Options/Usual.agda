@@ -24,11 +24,21 @@ none = Some (Lift ⊥) , const (throw "Argument provided when none expected")
 lotsOf : ∀ {ℓ} → Arguments ℓ → Arguments ℓ
 lotsOf {ℓ} (d , p) = ALot (List.rawMagma (Carrier d)) , ([_] <$>_) ∘ p
 
+Regex = String
+
+regex : Arguments zero
+regex = Some Regex , inj₂
+
+string : Arguments zero
+string = Some String , inj₂
 
 FilePath = String
-
 filePath : Arguments zero
 filePath = Some FilePath , inj₂
+
+Regexp = String
+regexp : Arguments zero
+regexp = Some Regexp , inj₂
 
 Url = String
 url : Arguments zero

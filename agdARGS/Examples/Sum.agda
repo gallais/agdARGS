@@ -60,8 +60,8 @@ main = withCLI sum-cli $ putStrLn ∘ success where
     
   success : ParsedInterface sum-cli → String
   success ([                 ._ ∷= m & _ ])  =
-         if is-just (m ‼ "--version") then "Sum version: 0.1"
-    else if is-just (m ‼ "-h")        then usage sum-cli
+         if lower (m ‼ "--version") then "Sum version: 0.1"
+    else if lower (m ‼ "-h")        then usage sum-cli
     else ""
   success ([ ."int" [   z ]∙ ._ ∷= _ & vs ]) = Int.show     $ sumInt vs
   success ([ ."nat" [ s z ]∙ ._ ∷= _ & vs ]) = NatShow.show $ sumNat vs
