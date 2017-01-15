@@ -100,7 +100,8 @@ open import Data.Sum
 updateArgument :
   {ℓ : Level} (d : Domain ℓ) (p : Parser d) (ps : ParsedArguments (d , p)) →
   String → Error $ ParsedArguments (d , p)
-updateArgument (Some S) p ps x = throw "Too Many arguments: only one expected"
+updateArgument (Some S) p (just _) _ = throw "Too Many arguments: only one expected"
+updateArgument (Some S) p nothing x = just <$> p x
 updateArgument (ALot M) p ps x = maybe′ (λ p q → just (RawMagma._∙_ M p q)) just ps <$> p x
 
 parseArguments : {ℓ : Level} (p : Σ[ d ∈ Domain ℓ ] Parser d) → List String
