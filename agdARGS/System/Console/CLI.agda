@@ -118,7 +118,7 @@ parseArguments p str dft = foldl (cons p) (inj₂ dft) str
       where open RawMagma m
 
 [dummy] : {ℓ : Level} {lb ub : _} (args : UniqueSortedList lb ub)
-          (mods : Record args (tabulate (λ {s} _ → Modifier ℓ s))) →
+          (mods : Record args (RU.tabulate (λ {s} _ → Modifier ℓ s))) →
           [Record] args (fields $ Type $ RU.map (const ParsedModifier) mods)
 [dummy] (_ ■)             m                   = lift tt
 [dummy] (_ UU., _ ∷ args) (mkRecord (mkFlag _   , ms)) = lift false , [dummy] args (mkRecord ms)

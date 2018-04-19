@@ -37,7 +37,7 @@ option n p = mkOption $ "description" ∷= lift n
                       ⟨ ⟨⟩
 
 toFields : ∀ ℓ {lb ub} {names : UniqueSortedList lb ub} → Fields (suc ℓ) names
-toFields ℓ = tabulate $ λ {s} → const (Modifier ℓ s)
+toFields ℓ = RU.tabulate $ λ {s} → const (Modifier ℓ s)
 
 Modifiers : ∀ ℓ → Set (suc ℓ)
 Modifiers ℓ = Σ[ names ∈ USL ] Record names (toFields ℓ)

@@ -4,7 +4,8 @@ open import Level using (Level)
 open import Data.Nat
 open import Data.Product hiding (map)
 open import Data.List as List using (List ; _∷_ ; [])
-open import Data.Vec as Vec hiding (applicative ; zipWith ; _⊛_)
+open import Data.Vec as Vec hiding (zipWith ; _⊛_)
+import Data.Vec.Categorical as Vec
 open import Data.String as Str hiding (show)
 open import agdARGS.Data.String as String
 open import Function
@@ -55,4 +56,4 @@ show {n = n} tb = String.unlines $ uncurry (flip _$_) res
 
     res : P
     res = foldr (const P) (λ {m} → cons {m}) (Vec.replicate 0 , const []) tb
-   
+

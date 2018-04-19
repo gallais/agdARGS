@@ -20,4 +20,7 @@ arguments parsing and usage):
 
 ## Dependencies
 
-This work relies on the [standard library](http://github.com/agda/agda-stdlib).
+This work has been tested using:
+
+* Agda version 2.5.3
+* The [standard library](http://github.com/agda/agda-stdlib) version 0.15
