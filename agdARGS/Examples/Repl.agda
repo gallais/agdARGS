@@ -38,8 +38,8 @@ cli = record
   ; exec = record
     { description  = "Scheme, in Agda!"
     ; subcommands =
-      , < "eval" ∷= record (basic $ string) { description = "Evaluate a line" }
-      ⟨   "repl" ∷= record (basic $ none) { description = "Read-eval-print loop" }
+      , < "eval" ∷= record (basic string) { description = "Evaluate a line" }
+      ⟨   "repl" ∷= record (basic none) { description =  "Read-eval-print loop" }
       ⟨ ⟨⟩
     ; modifiers   =
       , "-h"           ∷= flag "Display this help"

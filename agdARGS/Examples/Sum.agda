@@ -57,7 +57,7 @@ main = withCLI sum-cli $ putStrLn ∘ success where
 
   sumInt : Maybe (List ℤ) → ℤ
   sumInt = maybe (List.foldr Int._+_ (+ 0)) (+ 0)
-    
+
   success : ParsedInterface sum-cli → String
   success ([                 ._ ∷= m & _ ])  =
          if lower (m ‼ "--version") then "Sum version: 0.1"

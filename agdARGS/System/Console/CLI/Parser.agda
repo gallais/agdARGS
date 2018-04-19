@@ -34,7 +34,7 @@ mutual
     dec (x ∈? proj₁ (subcommands c)) (parseSubCommand c (y ∷ xs)) $ λ _ →
     let recyxs = parseCommand c (y ∷ xs)
         recxs  = parseCommand c xs
-    in dec (x ∈? proj₁ (modifiers c)) (parseModifier c recyxs recxs) $ 
+    in dec (x ∈? proj₁ (modifiers c)) (parseModifier c recyxs recxs) $
     const $ parseArgument c recyxs x
 
 parseInterface : ∀ {ℓ} (c : CLI ℓ) → List String → Error $ ParsedInterface c
