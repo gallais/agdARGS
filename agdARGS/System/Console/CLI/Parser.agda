@@ -21,7 +21,8 @@ mutual
     (λ s → subCommand pr s) <$> parseCommand (project′ pr cs) xs
 
   parseCommand : ∀ {ℓ s} (c : Command ℓ s) → List String → Error $ ParsedCommand c
-  parseCommand c []          = throw "Not enough arguments"
+  parseCommand c []          = theCommand dummy
+                             <$> parseArguments (arguments c) [] nothing
   parseCommand c ("--" ∷ xs) = theCommand dummy
                              <$> parseArguments (arguments c) xs nothing
   parseCommand c (x ∷ [])    =
