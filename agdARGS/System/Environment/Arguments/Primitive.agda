@@ -10,4 +10,4 @@ open import Data.String
 postulate
   getArgs : IO (List String)
 
-{-# COMPILE GHC getArgs (fmap Data.Text.pack <$> System.Environment.getArgs) #-}
+{-# COMPILE GHC getArgs = fmap Data.Text.pack <$> System.Environment.getArgs #-}
