@@ -18,9 +18,24 @@ arguments parsing and usage):
   respectively) which sum the list of numbers (nats and ints respectively) they are
   given.
 
-## Dependencies
+## Building
 
 This work has been tested using:
 
 * Agda version 2.5.3
 * The [standard library](http://github.com/agda/agda-stdlib) version 0.15
+
+To build everything:
+
+```bash
+git clone --branch v0.15 http://github.com/agda/agda-stdlib
+./agdARGS/all.sh && mv All.agda agdARGS
+AGDA_STDLIB=$PWD/agda-stdlib
+agda -i . \
+     -i $AGDA_STDLIB \
+     -c --compile-dir=__build \
+     ./agdARGS/All.agda
+```
+
+If you already have a copy of the standard library, you can just set
+`AGDA_STDLIB` appropriately.
