@@ -15,7 +15,7 @@ open import Relation.Nullary.Negation
 
 open import Data.Record.Base {a} {A} public
 
-infixr 3 _∷=_<_
+infixr 5 _∷=_<_
 _∷=_<_ : ∀ {ks Unq l ls f fs}
          k {k∉ks : True (all (¬? ∘ (k ≟_)) ks)} → f →
          Record ks Unq ls fs →
@@ -24,5 +24,5 @@ _∷=_<_ {ks} {Unq} k {k∉ks} v r = cons {ks} {Unq} k (toWitness k∉ks) v r
 
 lookup : ∀ {ks Unq ls fs} → Record ks Unq ls fs →
          ∀ k {k∈ks : True (any (k ≟_) ks)} → let k∈ks = toWitness k∈ks in
-         flookup ls k∈ks fs
+         flookup ls fs k∈ks
 lookup r k {k∈ks} = Record.lookup r (toWitness k∈ks)

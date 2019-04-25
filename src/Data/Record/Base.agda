@@ -24,26 +24,27 @@ Fields []       = Lift _ ⊤
 Fields (l ∷ ls) = Set l × Fields ls
 
 flookup : ∀ {k ks} (ls : Levels ks) →
-          (pr : k ∈ ks) → Fields ls → Set (All.lookup ls pr)
-flookup (l ∷ ls) (here refl)  (A , _)  = A
-flookup (l ∷ ls) (there pr)   (_ , fs) = flookup ls pr fs
+          Fields ls → (k∈ks : k ∈ ks) → Set (All.lookup ls k∈ks)
+flookup (l ∷ ls) (A , _)  (here refl)  = A
+flookup (l ∷ ls) (_ , fs) (there k∈ks) = flookup ls fs k∈ks
 
 Values : ∀ {ks} (ls : Levels ks) (fs : Fields ls) → Set (⨆ ls)
 Values []       _        = ⊤
 Values (l ∷ ls) (A , fs) = A × Values ls fs
 
 vlookup : ∀ {k ks} (ls : Levels ks) {fs : Fields ls} →
-          (pr : k ∈ ks) → Values ls fs → flookup ls pr fs
-vlookup (l ∷ ls) (here refl) (v , _)  = v
-vlookup (l ∷ ls) (there pr)  (_ , vs) = vlookup ls pr vs
+          Values ls fs → (k∈ks : k ∈ ks) → flookup ls fs k∈ks
+vlookup (l ∷ ls) (v , _)  (here refl)  = v
+vlookup (l ∷ ls) (_ , vs) (there k∈ks) = vlookup ls vs k∈ks
 
 record Record (ks : List A) ..(Unique : Unique ks) -- keys
               (ls : Levels ks) (fs : Fields ls)   -- fields
               : Set (⨆ ls) where
   field values : Values ls fs
 
-  lookup : ∀ {k} (pr : k ∈ ks) → flookup ls pr fs
-  lookup pr = vlookup ls pr values
+  lookup : ∀ {k} (k∈ks : k ∈ ks) → flookup ls fs k∈ks
+  lookup = vlookup ls values
+
 open Record public hiding (lookup)
 
 empty : Record [] [] [] _
