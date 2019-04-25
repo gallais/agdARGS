@@ -26,3 +26,6 @@ lookup : ∀ {ks Unq ls fs} → Record ks Unq ls fs →
          ∀ k {k∈ks : True (any (k ≟_) ks)} → let k∈ks = toWitness k∈ks in
          flookup ls fs k∈ks
 lookup r k {k∈ks} = Record.lookup r (toWitness k∈ks)
+
+infixl 4 _∙_
+_∙_ = lookup

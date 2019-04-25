@@ -17,7 +17,7 @@ example = "string" ∷= "hello "
         < <>
 
 four : ℕ
-four = lookup (lookup example "record") "nested?"
+four = example ∙ "record" ∙ "nested?"
 
 the : List Char
-the = lookup example "lchars"
+the = example ∙ "lchars"
