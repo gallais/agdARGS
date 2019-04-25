@@ -17,7 +17,7 @@ example = "string" ∷= "hello "
         < <>
 
 four : ℕ
-four = example ∙ "record" ∙ "nested?"
+four = example ∙ "record" [ "of course!" ]∷= "hehe" ∙ "nested?"
 
 the : List Char
 the = example ∙ "lchars"
