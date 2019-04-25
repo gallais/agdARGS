@@ -6,7 +6,7 @@ module Data.Record.DecPropositional
 
 open import Data.List.Base using (_∷_)
 open import Data.List.Relation.Unary.All using (All; _∷_; all)
-open import Data.List.Relation.Unary.Any using (any)
+open import Data.List.Membership.DecPropositional _≟_
 open import Data.List.Relation.Unary.Unique.Propositional
 open import Data.Product
 open import Function
@@ -45,7 +45,7 @@ _∷=_<_ = cons
 -- Smart lookup
 
 lookup : ∀ {ks Unq ls fs} → Record ks Unq ls fs →
-  ∀ k {k∈ks : True (any (k ≟_) ks)} → let k∈ks = toWitness k∈ks in
+  ∀ k {k∈ks : True (k ∈? ks)} → let k∈ks = toWitness k∈ks in
   Record.flookup ls fs k∈ks
 lookup r k {k∈ks} = Record.lookup r (toWitness k∈ks)
 
@@ -57,7 +57,7 @@ _∙_ = lookup
 
 updateAt : ∀ {u} {U : Set u} {ks Unq ls fs} →
   Record ks Unq ls fs →
-  ∀ k {k∈ks : True (any (k ≟_) ks)} → let k∈ks = toWitness k∈ks in
+  ∀ k {k∈ks : True (k ∈? ks)} → let k∈ks = toWitness k∈ks in
   (Record.flookup ls fs k∈ks → U) →
   Record ks Unq (Record.lupdateAt ls k∈ks u) (Record.fupdateAt ls fs k∈ks U)
 updateAt r k {k∈ks} f = Record.updateAt r (toWitness k∈ks) f
@@ -70,7 +70,7 @@ _[_]%=_ = updateAt
 
 setAt : ∀ {u} {U : Set u} {ks Unq ls fs} →
   Record ks Unq ls fs →
-  ∀ k {k∈ks : True (any (k ≟_) ks)} → let k∈ks = toWitness k∈ks in
+  ∀ k {k∈ks : True (k ∈? ks)} → let k∈ks = toWitness k∈ks in
   U → Record ks Unq (Record.lupdateAt ls k∈ks u) (Record.fupdateAt ls fs k∈ks U)
 setAt r k {k∈ks} v = Record.setAt r (toWitness k∈ks) v
 
