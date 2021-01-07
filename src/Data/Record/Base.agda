@@ -1,100 +1,77 @@
 module Data.Record.Base {a} {A : Set a} where
 
-open import Level
-open import Data.Unit
-open import Data.List.Base using (List; []; _∷_)
-open import Data.List.Relation.Unary.All as All using (All; []; _∷_)
-open import Data.List.Relation.Unary.Any using (here; there)
-open import Data.List.Relation.Unary.Unique.Propositional
-open import Data.List.Membership.Propositional
-open import Data.Product
-open import Function
-open import Relation.Nullary
-open import Relation.Binary.PropositionalEquality
+open import Level using (Level)
+open import Data.Nat.Base using (suc)
+open import Data.Product using (_,_; proj₁; proj₂)
+open import Data.Vec.Base as Vec using (Vec; []; _∷_)
+open import Data.Vec.Membership.Propositional using (_∈_)
+open import Data.Vec.Relation.Unary.All as All using (All; []; _∷_)
+open import Data.Vec.Relation.Unary.Any using (here; there; index)
+open import Data.Vec.Relation.Unary.Unique.Propositional as Unique using (Unique; []; _∷_)
+open import Function.Base using (const)
+open import Relation.Binary.PropositionalEquality using (_≢_; refl)
+
+open import Function.Nary.NonDependent
+open import Data.Product.Nary.NonDependent
+
+
+private
+  variable
+    v : Level
+    V : Set v
 
 ------------------------------------------------------------------------
 -- Base Type
 
-Levels : List A → Set a
-Levels = All (λ _ → Level)
-
-⨆ : ∀ {ks} → Levels ks → Level
-⨆ []       = zero
-⨆ (l ∷ ls) = l ⊔ (⨆ ls)
-
-Fields : ∀ {ks} (ls : Levels ks) → Set (suc (⨆ ls))
-Fields []       = Lift _ ⊤
-Fields (l ∷ ls) = Set l × Fields ls
-
-Values : ∀ {ks} (ls : Levels ks) (fs : Fields ls) → Set (⨆ ls)
-Values []       _        = ⊤
-Values (l ∷ ls) (A , fs) = A × Values ls fs
-
-record Record (ks : List A) ..(Unique : Unique ks) -- keys
-              (ls : Levels ks) (fs : Fields ls)   -- fields
-              : Set (⨆ ls) where
-  field values : Values ls fs
+record Record {n} (ks : Vec A n) ..(Unique : Unique ks) -- keys
+              {ls : Levels n} (fs : Sets n ls)   -- fields
+              : Set (⨆ n ls) where
+  field values : Product⊤ n fs
 open Record public
 
 ------------------------------------------------------------------------
 -- Constructors
 
-empty : Record [] [] [] _
+empty : Record [] [] _
 empty .values = _
 <> = empty
 
-cons : ∀ {ks Unq ls fs} →
-       ∀ k {v} {V : Set v} (k∉ks : All (¬_ ∘′ (k ≡_)) ks) → V →
-       Record ks Unq ls fs → Record (k ∷ ks) (k∉ks ∷ Unq) (v ∷ ls) (V , fs)
+cons : ∀ {n ks Unq ls fs} →
+       ∀ k (k∉ks : All (k ≢_) ks) → V →
+       Record {n} ks Unq {ls} fs → Record (k ∷ ks) (k∉ks ∷ Unq) (V , fs)
 cons k k∉ks v r .values = v , r .values
+
+------------------------------------------------------------------------
+-- Destructors
+
+head : ∀ {n ks Unq ls fs} → Record {suc n} ks Unq {ls} fs →
+       proj₁ fs
+head r = r .values .proj₁
+
+tail : ∀ {n ks Unq ls fs} → Record {suc n} ks Unq {ls} fs →
+       Record {n} (Vec.tail ks) (Unique.tail Unq) (proj₂ fs)
+tail r .values = r .values .proj₂
 
 ------------------------------------------------------------------------
 -- Lookup
 
-flookup : ∀ {k ks} (ls : Levels ks) →
-          Fields ls → (k∈ks : k ∈ ks) → Set (All.lookup ls k∈ks)
-flookup (l ∷ ls) (A , _)  (here refl)  = A
-flookup (l ∷ ls) (_ , fs) (there k∈ks) = flookup ls fs k∈ks
-
-vlookup : ∀ {k ks} (ls : Levels ks) {fs : Fields ls} →
-          Values ls fs → (k∈ks : k ∈ ks) → flookup ls fs k∈ks
-vlookup (l ∷ ls) (v , _)  (here refl)  = v
-vlookup (l ∷ ls) (_ , vs) (there k∈ks) = vlookup ls vs k∈ks
-
-lookup : ∀ {k ks Unq ls fs} →
-  Record ks Unq ls fs → (k∈ks : k ∈ ks) → flookup ls fs k∈ks
-lookup r = vlookup _ (r .values)
+lookup : ∀ {n ks Unq ls fs} → Record {n} ks Unq {ls} fs →
+         ∀ {k} → (k∈ks : k ∈ ks) → Projₙ fs (index k∈ks)
+lookup r (here px)    = head r
+lookup r (there k∈ks) = lookup (tail r) k∈ks
 
 ------------------------------------------------------------------------
 -- UpdateAt
 
-lupdateAt : ∀ {k ks} → Levels ks → k ∈ ks → Level → Levels ks
-lupdateAt (_ ∷ ls) (here _)     u = u ∷ ls
-lupdateAt (l ∷ ls) (there k∈ks) u = l ∷ lupdateAt ls k∈ks u
-
-fupdateAt : ∀ {u k ks} (ls : Levels ks)
-  (fs : Fields ls) (k∈ks : k ∈ ks) → Set u →
-  Fields (lupdateAt ls k∈ks u)
-fupdateAt (_ ∷ ls) (_ , fs) (here refl)  U = U , fs
-fupdateAt (l ∷ ls) (f , fs) (there k∈ks) U = f , fupdateAt ls fs k∈ks U
-
-vupdateAt : ∀ {u} {U : Set u} {k ks} ls {fs} →
-  Values ls fs → (k∈ks : k ∈ ks) →
-  (flookup ls fs k∈ks → U) →
-  Values (lupdateAt ls k∈ks u) (fupdateAt ls fs k∈ks U)
-vupdateAt (_ ∷ ls) (v , vs) (here refl)  f = f v , vs
-vupdateAt (l ∷ ls) (v , vs) (there k∈ks) f = v , vupdateAt ls vs k∈ks f
-
-updateAt : ∀ {u} {U : Set u} {k ks Unq ls fs} →
-  Record ks Unq ls fs → (k∈ks : k ∈ ks) →
-  (flookup ls fs k∈ks → U) →
-  Record ks Unq (lupdateAt ls k∈ks u) (fupdateAt ls fs k∈ks U)
-updateAt r k∈ks f .values = vupdateAt _ (r .values) k∈ks f
+updateAt : ∀ {n ks Unq ls fs} → Record {n} ks Unq {ls} fs →
+           ∀ {k} (k∈ks : k ∈ ks) → (Projₙ fs (index k∈ks) → V) →
+           Record ks Unq (Updateₙ fs (index k∈ks) V)
+updateAt {Unq = _ ∷ _} r (here refl)  f = cons _ _ (f (head r)) (tail r)
+updateAt {Unq = _ ∷ _} r (there k∈ks) f = cons _ _ (head r) (updateAt (tail r) k∈ks f)
 
 ------------------------------------------------------------------------
 -- SetAt
 
-setAt : ∀ {u} {U : Set u} {k ks Unq ls fs} →
-  Record ks Unq ls fs → (k∈ks : k ∈ ks) → U →
-  Record ks Unq (lupdateAt ls k∈ks u) (fupdateAt ls fs k∈ks U)
+setAt : ∀ {n ks Unq ls fs} → Record {n} ks Unq {ls} fs →
+        ∀ {k} (k∈ks : k ∈ ks) → V → Record ks Unq (Updateₙ fs (index k∈ks) V)
 setAt r k∈ks v = updateAt r k∈ks (const v)
