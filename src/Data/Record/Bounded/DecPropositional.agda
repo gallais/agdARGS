@@ -5,13 +5,12 @@ module Data.Record.Bounded.DecPropositional
 
 open import Level using (Level)
 open import Level.Bounded using (Set≤; theSet)
-open import Data.List.Base using (_∷_)
+open import Data.List.Base using (List; _∷_)
 open import Data.List.Relation.Unary.All using (All; _∷_; all?)
 open import Data.List.Relation.Unary.Any using (index)
 open import Data.List.Membership.DecPropositional _≟_ using (_∈?_)
 open import Data.List.Relation.Unary.Unique.Propositional using (_∷_)
-open import Data.Product
-open import Function
+open import Function.Base using (_∘_; const)
 open import Relation.Nullary.Decidable
 open import Relation.Nullary.Negation
 
@@ -33,13 +32,19 @@ open import Data.Record.Bounded.Base l {a} {A}
         )
   public
 
+IsFresh : A → List A → Set
+IsFresh k ks = True (all? (¬? ∘ (k ≟_)) ks)
+
+IsValid : A → List A → Set
+IsValid k ks = True (k ∈? ks)
+
 ------------------------------------------------------------------------
 -- Smart constructors
 
 cons : ∀ {ks uniq fs}
-  k {k∉ks : True (all? (¬? ∘ (k ≟_)) ks)} → theSet V →
-  Record uniq fs →
-  Record (toWitness k∉ks ∷ uniq) (Fields.cons V fs)
+  k {k∉ks : IsFresh k ks} → theSet V →
+  Record uniq fs → let k∉ks = toWitness k∉ks in
+  Record (k∉ks ∷ uniq) (Fields.cons V fs)
 cons k v r = Record.cons v r
 
 infixr 5 _∷=_<_
@@ -49,7 +54,7 @@ _∷=_<_ = cons
 -- Smart lookup
 
 lookup : ∀ {ks uniq fs} → Record uniq fs →
-  ∀ k {k∈ks : True (k ∈? ks)} → let k∈ks = toWitness k∈ks in
+  ∀ k {k∈ks : IsValid k ks} → let k∈ks = toWitness k∈ks in
   theSet (Fields.lookup fs k∈ks)
 lookup r k = Record.lookup r _
 
@@ -60,7 +65,7 @@ _∙_ = lookup
 -- Smart updateAt
 
 updateAt : ∀ {ks uniq fs} → Record uniq fs →
-  ∀ k {k∈ks : True (k ∈? ks)} → let k∈ks = toWitness k∈ks in
+  ∀ k {k∈ks : IsValid k ks} → let k∈ks = toWitness k∈ks in
   (theSet (Fields.lookup fs k∈ks) → theSet V) →
   Record uniq (Fields.setAt fs k∈ks V)
 updateAt r k f = Record.updateAt r _ f
@@ -72,7 +77,7 @@ _[_]%=_ = updateAt
 -- Smart setAt
 
 setAt : ∀ {ks uniq fs} → Record uniq fs →
-  ∀ k {k∈ks : True (k ∈? ks)} → let k∈ks = toWitness k∈ks in
+  ∀ k {k∈ks : IsValid k ks} → let k∈ks = toWitness k∈ks in
   theSet V → Record uniq (Fields.setAt fs k∈ks V)
 setAt r k v = updateAt r k (const v)
 
