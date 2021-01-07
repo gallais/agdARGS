@@ -12,7 +12,6 @@ open import Data.List.Relation.Unary.Unique.Propositional as Unique using (Uniqu
 open import Function.Base using (_∘_; const)
 open import Relation.Binary.PropositionalEquality using (_≢_; refl)
 
-
 private
   variable
     V : Set≤ l
@@ -45,7 +44,7 @@ module Fields where
   setAt fs (here px) v = cons v (tail fs)
   setAt fs (there p) v = cons (head fs) (setAt (tail fs) p v)
 
-open Fields using (Fields)
+open Fields using (Fields) hiding (module Fields) public
 
 Values : (ks : List A) → Fields ks → Set l
 Values []       fs = ⊤

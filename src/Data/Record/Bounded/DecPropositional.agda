@@ -29,6 +29,7 @@ open import Data.Record.Bounded.Base l {a} {A}
         ; head
         ; tail
         ; module Fields
+        ; Fields
         )
   public
 
