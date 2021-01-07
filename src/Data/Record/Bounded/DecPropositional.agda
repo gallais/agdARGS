@@ -42,7 +42,7 @@ IsValid k ks = True (k ∈? ks)
 ------------------------------------------------------------------------
 -- Smart constructors
 
-cons : ∀ {ks uniq fs}
+cons : ∀ {ks fs} ..{uniq}
   k {k∉ks : IsFresh k ks} → theSet V →
   Record uniq fs → let k∉ks = toWitness k∉ks in
   Record (k∉ks ∷ uniq) (Fields.cons V fs)
@@ -54,7 +54,7 @@ _∷=_<_ = cons
 ------------------------------------------------------------------------
 -- Smart lookup
 
-lookup : ∀ {ks uniq fs} → Record uniq fs →
+lookup : ∀ {ks} ..{uniq} {fs} → Record uniq fs →
   ∀ k {k∈ks : IsValid k ks} → let k∈ks = toWitness k∈ks in
   theSet (Fields.lookup fs k∈ks)
 lookup r k = Record.lookup r _
@@ -65,7 +65,7 @@ _∙_ = lookup
 ------------------------------------------------------------------------
 -- Smart updateAt
 
-updateAt : ∀ {ks uniq fs} → Record uniq fs →
+updateAt : ∀ {ks} ..{uniq} {fs} → Record uniq fs →
   ∀ k {k∈ks : IsValid k ks} → let k∈ks = toWitness k∈ks in
   (theSet (Fields.lookup fs k∈ks) → theSet V) →
   Record uniq (Fields.setAt fs k∈ks V)
@@ -77,7 +77,7 @@ _[_]%=_ = updateAt
 ------------------------------------------------------------------------
 -- Smart setAt
 
-setAt : ∀ {ks uniq fs} → Record uniq fs →
+setAt : ∀ {ks} ..{uniq} {fs} → Record uniq fs →
   ∀ k {k∈ks : IsValid k ks} → let k∈ks = toWitness k∈ks in
   theSet V → Record uniq (Fields.setAt fs k∈ks V)
 setAt r k v = updateAt r k (const v)

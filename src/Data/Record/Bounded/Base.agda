@@ -62,25 +62,25 @@ empty : Record [] Fields.empty
 empty .values = _
 <> = empty
 
-cons : ∀ {ks uniq fs} →
-       ∀ {k} {k∉ks : All (k ≢_) ks} → theSet V →
-       Record {ks} uniq fs → Record (k∉ks ∷ uniq) (Fields.cons V fs)
+cons : ∀ {k ks fs} ..{uniq : Unique (k ∷ ks)} →
+       theSet V → Record {ks} (Unique.tail uniq) fs →
+       Record uniq (Fields.cons V fs)
 cons v r .values = lift v , r .values
 
 ------------------------------------------------------------------------
 -- Destructors
 
-head : ∀ {uniq fs} → Record {k ∷ ks} uniq fs → theSet (Fields.head fs)
+head : ∀ ..{uniq} {fs} → Record {k ∷ ks} uniq fs → theSet (Fields.head fs)
 head r = lower (r .values .proj₁)
 
-tail : ∀ {uniq fs} → Record {k ∷ ks} uniq fs →
+tail : ∀ ..{uniq} {fs} → Record {k ∷ ks} uniq fs →
        Record {ks} (Unique.tail uniq) (Fields.tail fs)
 tail r .values = r .values .proj₂
 
 ------------------------------------------------------------------------
 -- Lookup
 
-lookup : ∀ {uniq fs} → Record uniq fs →
+lookup : ∀ ..{uniq} {fs} → Record uniq fs →
          ∀ {k} → (k∈ks : k ∈ ks) → theSet (Fields.lookup fs k∈ks)
 lookup r (here refl)  = head r
 lookup r (there k∈ks) = lookup (tail r) k∈ks
@@ -88,16 +88,16 @@ lookup r (there k∈ks) = lookup (tail r) k∈ks
 ------------------------------------------------------------------------
 -- UpdateAt
 
-updateAt : ∀ {uniq fs} → Record uniq fs →
+updateAt : ∀ ..{uniq} {fs} → Record uniq fs →
            ∀ {k} (k∈ks : k ∈ ks) → (theSet (Fields.lookup fs k∈ks) → theSet V) →
            Record uniq (Fields.setAt fs k∈ks V)
-updateAt {uniq = _ ∷ _} r (here refl)  f = cons (f (head r)) (tail r)
-updateAt {uniq = _ ∷ _} r (there k∈ks) f = cons (head r) (updateAt (tail r) k∈ks f)
+updateAt r (here refl)  f = cons (f (head r)) (tail r)
+updateAt r (there k∈ks) f = cons (head r) (updateAt (tail r) k∈ks f)
 
 ------------------------------------------------------------------------
 -- SetAt
 
-setAt : ∀ {ks uniq fs} → Record uniq fs →
+setAt : ∀ {ks} ..{uniq} {fs} → Record uniq fs →
         ∀ {k} (k∈ks : k ∈ ks) → theSet V →
         Record uniq (Fields.setAt fs k∈ks V)
 setAt r k∈ks v = updateAt r k∈ks (const v)
