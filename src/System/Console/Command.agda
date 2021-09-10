@@ -66,6 +66,7 @@ record ParsedCommandT
   field
     modifiers : ParsedModifiersT f g (modifiers cmd)
     arguments : ParsedArgumentsT   g (arguments cmd)
+open ParsedCommandT public
 
 module ParsedCommand where
 
@@ -76,6 +77,7 @@ module ParsedCommand where
     field
       modifiers : ParsedModifiers (modifiers cmd)
       arguments : ParsedArguments (arguments cmd)
+  open ParsedCommand public
 
   finalising : (nm : String) (cmd : Command nm) →
                ParsedCommandT Maybe Maybe nm cmd → Error (ParsedCommand nm cmd)
@@ -84,7 +86,7 @@ module ParsedCommand where
       <$> Modifier.finalising ms
       <*> Argument.finalising missingArgument (arguments cmd) as
 
-open ParsedCommand public using (ParsedCommand) hiding (module ParsedCommand)
+open ParsedCommand public using (ParsedCommand; modifiers; arguments) hiding (module ParsedCommand)
 
 ParseTreeT : (f g : Set → Set) {nm : String} (cmd : Command nm) → Set₂
 ParseTreeT f g = Any (ParsedCommandT f g)

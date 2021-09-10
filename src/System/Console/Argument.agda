@@ -29,8 +29,8 @@ record Arguments : Set₁ where
     domain     : Domain
     rawParser  : Parser String domain
 
-parser : (arg : Arguments) → Parser ErrorMsg (Arguments.domain arg)
-parser arg = Sum.map₁ couldNotParse ∘ Arguments.rawParser arg
+parser : (arg : Arguments) → String → Error (Carrier $ Arguments.domain arg)
+parser arg = fromSum ∘ Sum.map₁ couldNotParse ∘ Arguments.rawParser arg
 
 ParsedArgumentsT : (Set → Set) → Arguments → Set
 ParsedArgumentsT f args = f $ Carrier (Arguments.domain args)
@@ -39,10 +39,10 @@ update : (arg : Arguments) → ParsedArgumentsT Maybe arg →
          String → Error (ParsedArgumentsT Maybe arg)
 update (mkArguments req (Some S) prs) (just val) str
   = throw tooManyArguments
-update (mkArguments req (Some S) prs) nothing str
-  = fromSum $ Sum.map couldNotParse just (prs str)
-update (mkArguments req (ALot M) prs) mval str
-  = do val′ ← fromSum $ Sum.map couldNotParse id (prs str)
+update arg@(mkArguments req (Some S) prs) nothing str
+  = just <$> parser arg str
+update arg@(mkArguments req (ALot M) prs) mval str
+  = do val′ ← parser arg str
        pure $ just $ let open RawMagma M in
                      maybe′ (_∙ val′) val′ mval
 
