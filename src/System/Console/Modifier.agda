@@ -1,4 +1,4 @@
-module System.Console.Modifiers where
+module System.Console.Modifier where
 
 open import Level using (Level; Lift; lift)
 open import Algebra.Bundles using (RawMagma)
@@ -18,7 +18,7 @@ open import Data.Record.NonDependent String String._≟_
   using (Fields; Record; mkRecord; _‼_)
 
 open import System.Console.Error
-open import System.Console.Options.Domain as Domain
+open import System.Console.Argument as Argument
   using (Arguments; ParsedArgumentsT; ParsedArguments; Some; ALot)
 
 private
@@ -79,7 +79,7 @@ finalisingModifier : (mod : Modifier nm) →
 finalisingModifier (mkFlag   flg) val =
   pure $ fromMaybe (flg ‼ "default") val
 finalisingModifier {nm} (mkOption opt) val =
-  Domain.finalising (missingOption nm) (opt ‼ "arguments") val
+  Argument.finalising (missingOption nm) (opt ‼ "arguments") val
 
 ParsedModifiersT : (f g : Set → Set) → (mods : Fields Modifier) → Set₂
 ParsedModifiersT f g mods = Record (λ fld → ParsedModifierT f g (proj₂ fld)) mods
